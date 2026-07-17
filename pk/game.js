@@ -234,18 +234,10 @@ let keeperIdleX = 0;
 
 function K() { return KEEPERS[Math.min(stageIdx, TOTAL - 1)]; }
 
-// 周回補正込みの実効パラメータ。
-// 上限キャップにより「コーナーへの最速シュートが絶対に決まらない」強さには決してならない
-function kp(k) {
-  const l = loopCount;
-  return {
-    power: k.power >= 9 ? k.power : Math.min(k.power * (1 + l * 0.25), 0.9),
-    swayAmp: k.swayAmp,
-    swayPeriod: Math.max(k.swayPeriod / (1 + l * 0.10), 800),
-    diveSpeed: Math.min(k.diveSpeed * (1 + l * 0.12), 0.0019),
-    reactMs: Math.max(k.reactMs - l * 20, 150),
-    reach: Math.min(k.reach * (1 + l * 0.06), 0.31),
-  };
+// 周回による難化はキーパー強化ではなく「ゲージの速さ」で表現する。
+// 上限1.8倍キャップで、人間に決められない速さには決してならない
+function gaugeSpeedup() {
+  return Math.min(1 + loopCount * 0.15, 1.8);
 }
 
 // ===== 図鑑・実績(localStorage) =====
@@ -676,13 +668,13 @@ function tri(elapsed, period) {
 }
 function currentAngle() {
   const maxA = Math.atan((L.goalHalf * 1.3) / (L.ballY - L.goalBottom));
-  return Math.sin(((timeNow - phaseStart) / 1400) * Math.PI * 2) * maxA;
+  return Math.sin(((timeNow - phaseStart) / (1400 / gaugeSpeedup())) * Math.PI * 2) * maxA;
 }
-function currentSpeed() { return tri(timeNow - phaseStart, 950); }
-function currentSize() { return tri(timeNow - phaseStart, 650); }
+function currentSpeed() { return tri(timeNow - phaseStart, 950 / gaugeSpeedup()); }
+function currentSize() { return tri(timeNow - phaseStart, 650 / gaugeSpeedup()); }
 
 function doShoot() {
-  const e = kp(K()); // 周回補正込み
+  const e = K(); // キーパーの強さは周回で変わらない (難化はゲージ速度で表現)
   const { angle, speed, size } = plan;
 
   const flightMs = 900 - 500 * speed;
@@ -1848,9 +1840,8 @@ function loop(t) {
 
   // スウェー
   const k = K();
-  const ke = k ? kp(k) : null;
-  keeperPhase += (dt / (ke ? ke.swayPeriod : 2000)) * Math.PI * 2;
-  keeperIdleX = L.cx + Math.sin(keeperPhase) * (ke ? ke.swayAmp : 0.3) * L.goalHalf;
+  keeperPhase += (dt / (k ? k.swayPeriod : 2000)) * Math.PI * 2;
+  keeperIdleX = L.cx + Math.sin(keeperPhase) * (k ? k.swayAmp : 0.3) * L.goalHalf;
 
   // キックモーション → 発射
   if (state === STATE.KICK && kickAnim && timeNow - kickAnim.startT >= 350) {
