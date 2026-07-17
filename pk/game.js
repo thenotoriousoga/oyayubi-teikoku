@@ -345,6 +345,57 @@ function heartbeat() {
   thump(60, t + 0.16, 0.22, 0.10);
 }
 
+// ===== HipHopビート(オリジナル打ち込み・狙い中に薄く流す) =====
+function drumKick(t) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(110, t);
+  o.frequency.exponentialRampToValueAtTime(42, t + 0.11);
+  g.gain.setValueAtTime(0.30, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  o.connect(g).connect(AC.destination);
+  o.start(t); o.stop(t + 0.16);
+}
+
+function drumSnare(t) {
+  const n = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
+  n.buffer = noiseBuf;
+  f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.8;
+  g.gain.setValueAtTime(0.14, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+  n.connect(f).connect(g).connect(AC.destination);
+  n.start(t); n.stop(t + 0.1);
+}
+
+function drumHat(t, open) {
+  const n = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
+  n.buffer = noiseBuf;
+  f.type = 'highpass'; f.frequency.value = 7500;
+  g.gain.setValueAtTime(open ? 0.05 : 0.035, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.08 : 0.03));
+  n.connect(f).connect(g).connect(AC.destination);
+  n.start(t); n.stop(t + 0.1);
+}
+
+// 88BPM・8分音符ステップ。ブーンバップの基本形
+let beatNextT = 0;
+let beatStep = 0;
+const BEAT_8TH = 60 / 88 / 2; // ≒0.34s
+
+function scheduleBeat() {
+  if (!AC) return;
+  const now = AC.currentTime;
+  if (beatNextT < now - 0.5) { beatNextT = now + 0.05; } // 中断後の再開
+  while (beatNextT < now + 0.35) {
+    const s = beatStep % 8;
+    if (s === 0 || s === 5) drumKick(beatNextT);      // ドッ ・・ ドッ
+    if (s === 2 || s === 6) drumSnare(beatNextT);     // スネアは2・4拍
+    drumHat(beatNextT, s === 7);                      // ハットは刻み、小節末はオープン
+    beatNextT += BEAT_8TH;
+    beatStep++;
+  }
+}
+
 function playTap() {
   if (!AC) return;
   const t = AC.currentTime;
@@ -424,6 +475,30 @@ function playFail() {
 function vibrate(ms) {
   if (navigator.vibrate) navigator.vibrate(ms);
 }
+
+// ===== 実況テキスト =====
+// 各国の実況風ゴールコール (英/西/葡/伊)
+const GOAL_BANNERS = ['GOOOOAL!!', '¡GOLAZO!!', 'GOLAÇO!!', 'CHE GOL!!', '¡GOOOOOL!!', 'MAMMA MIA!!', 'BELLISSIMO!!'];
+const BLOW_BANNERS = ['SMAAASH!!', '¡BOMBAZO!!', 'KNOCKOUT!!'];
+const DEMOLISH_BANNERS = ['ゴールごと粉砕!!', 'GOAL BREAKER!!'];
+
+// One Shot スピリットのオリジナルライン (狙い中)
+const AIM_LINES = [
+  'ONE SHOT. 一発で決めろ。',
+  '逃せば終わり。掴めば伝説。',
+  'チャンスは一度。二度は無い。',
+  '心臓の音だけが聞こえる。',
+  'Yo. 世界はお前の一撃を待ってる。',
+  '震えてもいい。前に蹴れ。',
+];
+const RETRY_LINES = ['まだ立てるだろ。Get up.', '外した過去より、次の一撃。'];
+const LAST_CHANCE_LINE = 'ラストチャンス。全部この一発に置いてけ。';
+const ANNOUNCE_LINES = [
+  '─ これを決めれば、勝利 ─',
+  '─ SEIZE THE MOMENT ─',
+  '─ 一度きり。決めるのはお前だ ─',
+  '─ NOW OR NEVER ─',
+];
 
 // ===== 演出ユーティリティ =====
 function showBanner(text, color) {
@@ -538,6 +613,7 @@ function showIntro() {
   introCountryEl.textContent = `VS ${k.country}`;
   introKeeperEl.textContent = `${k.emoji} GK ${k.name}`;
   introLineEl.textContent = `${k.intro[0]}${k.intro[1]}`;
+  document.querySelector('.intro-announce').textContent = pick(ANNOUNCE_LINES);
   introOverlay.classList.remove('hidden');
   updateHUD();
 }
@@ -548,12 +624,7 @@ function enterAim() {
   plan = { angle: 0, speed: 0, size: 0 };
   phaseStart = timeNow;
   shot = null;
-  hintEl.textContent = pick([
-    'たった一度のチャンス、逃すな。',
-    'これを決めれば、勝利。',
-    '世界が見ている。',
-    '足が震えても、前へ。',
-  ]);
+  hintEl.textContent = pick(AIM_LINES);
   hintEl.classList.add('show');
   speak(K().intro, 2000);
 }
@@ -644,7 +715,7 @@ function resolveShot() {
     burstConfetti(shot.tx, shot.ty, 90);
     fx.shake = 1.6;
     fx.flash = 1;
-    showBanner('ゴールごと粉砕!!', '#ffc93c');
+    showBanner(pick(DEMOLISH_BANNERS), '#ffc93c');
     speak(k.hit, 2200);
     playBlow(true);
     vibrate([60, 40, 120]);
@@ -656,7 +727,7 @@ function resolveShot() {
     fx.netShake = 1;
     fx.shake = 1;
     fx.flash = 1;
-    showBanner('ふっとばした!!', '#ffc93c');
+    showBanner(pick(BLOW_BANNERS), '#ffc93c');
     speak(k.hit, 2000);
     playBlow(false);
     vibrate([40, 30, 80]);
@@ -666,7 +737,7 @@ function resolveShot() {
     burstConfetti(shot.tx, shot.ty, 60);
     fx.netShake = 1;
     fx.flash = 1;
-    showBanner(pick(['GOAL!', 'ゴラッソ!!', 'コース完璧!']), '#ffc93c');
+    showBanner(pick(GOAL_BANNERS), '#ffc93c');
     speak(k.hit, 2000);
     playGoal();
     vibrate([30, 40, 60]);
@@ -689,7 +760,7 @@ function resolveShot() {
           plan = { angle: 0, speed: 0, size: 0 };
           phaseStart = timeNow;
           shot = null;
-          hintEl.textContent = hearts === 1 ? 'ラストチャンス。すべてを込めろ。' : 'まだ終わっていない。';
+          hintEl.textContent = hearts === 1 ? LAST_CHANCE_LINE : pick(RETRY_LINES);
           hintEl.classList.add('show');
         }
       }, 1400);
@@ -1750,9 +1821,10 @@ function loop(t) {
     }
   }
 
-  // 鼓動(狙い中)
+  // 狙い中はビートを流す。ラスト1ハートは心臓の鼓動も重なる
   if ((state === STATE.AIM_DIR || state === STATE.AIM_POWER || state === STATE.AIM_SIZE) && AC) {
-    heartbeat();
+    scheduleBeat();
+    if (hearts === 1) heartbeat();
   }
 
   fx.netShake = Math.max(0, fx.netShake - dt / 600);
