@@ -1,0 +1,182 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1c33;
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#hud {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hud-item {
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+}
+
+.hud-item span {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffd94d;
+}
+
+#banner {
+  position: fixed;
+  top: 34%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: clamp(40px, 13vw, 76px);
+  font-weight: 900;
+  color: #ffd94d;
+  -webkit-text-stroke: 2px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+}
+
+#banner.pop {
+  animation: banner-pop 0.9s ease-out forwards;
+}
+
+@keyframes banner-pop {
+  0%   { opacity: 0; transform: scale(0.3); }
+  18%  { opacity: 1; transform: scale(1.15); }
+  30%  { transform: scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+#hint {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#hint.show {
+  opacity: 1;
+  animation: hint-bob 1.4s ease-in-out infinite;
+}
+
+@keyframes hint-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(4, 12, 26, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  color: #fff;
+  text-align: center;
+  z-index: 10;
+  padding: 24px;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay h1 {
+  font-size: clamp(44px, 15vw, 84px);
+  font-weight: 900;
+  color: #ffd94d;
+  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+}
+
+.overlay h2 {
+  font-size: clamp(30px, 9vw, 52px);
+  font-weight: 900;
+  color: #ff7b7b;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.overlay p {
+  font-size: 15px;
+  line-height: 1.9;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.over-score {
+  font-size: 18px;
+}
+
+.over-score span {
+  font-size: 42px;
+  font-weight: 900;
+  color: #ffd94d;
+}
+
+.over-best {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.over-best span {
+  font-weight: 800;
+  color: #fff;
+}
+
+.tap-label {
+  margin-top: 10px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #7fd4ff;
+  animation: tap-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes tap-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}

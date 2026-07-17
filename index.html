@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1c33">
+  <title>PK対決!</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="hud-item">連続ゴール <span id="score">0</span></div>
+    <div class="hud-item">ベスト <span id="best">0</span></div>
+  </div>
+
+  <div id="banner"></div>
+  <div id="hint">⚽ を上にスワイプしてシュート!</div>
+
+  <div id="start-overlay" class="overlay">
+    <h1>PK対決!</h1>
+    <p>スワイプでシュート!<br>キーパーをかわして連続ゴールを狙え。<br>速いスワイプほど強烈だが、コントロールが乱れるぞ。</p>
+    <div class="tap-label">タップでスタート</div>
+  </div>
+
+  <div id="over-overlay" class="overlay hidden">
+    <h2 id="over-reason">セーブされた!</h2>
+    <div class="over-score">連続ゴール <span id="over-score">0</span></div>
+    <div class="over-best">ベスト <span id="over-best">0</span></div>
+    <div class="tap-label">タップでリトライ</div>
+  </div>
+
+  <script src="game.js" defer></script>
+</body>
+</html>
