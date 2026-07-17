@@ -94,7 +94,8 @@ const KEEPERS = [
     power: 0.04, swayAmp: 0.16, swayPeriod: 2800, diveSpeed: 0.00035, reactMs: 520, reach: 0.10, scale: 0.5,
     intro: ['わん!', '(あそんでくれるの?)'],
     save: ['わん!!', '(ボールとれたよ!)'],
-    hit: ['きゃうん!', '(たのしかった〜)'],
+    hit: ['わふ?', '(いまのどこいった?)'],
+    blown: ['きゃいーん!!', '(おそらとんでる〜)'],
     draw: drawPochi,
   },
   {
@@ -102,7 +103,8 @@ const KEEPERS = [
     power: 0.10, swayAmp: 0.24, swayPeriod: 2300, diveSpeed: 0.0006, reactMs: 420, reach: 0.14, scale: 0.7,
     intro: ['ぜったい止めるもん!', '(母ちゃん見てて)'],
     save: ['やった〜!!', '(母ちゃん見た!?)'],
-    hit: ['うわ〜ん!', '(でも楽しい)'],
+    hit: ['え、いま入った?', '(全然見えなかった…)'],
+    blown: ['うわあああ!', '(母ちゃん、ぼく飛んでる!)'],
     draw: drawKenta,
   },
   {
@@ -110,7 +112,8 @@ const KEEPERS = [
     power: 0.18, swayAmp: 0.3, swayPeriod: 2000, diveSpeed: 0.0008, reactMs: 360, reach: 0.17, scale: 0.9,
     intro: ['守りは麺の硬さと同じ', '(バリカタよ)'],
     save: ['ズズッ', '(いただきました)'],
-    hit: ['のびた〜!?', '(麺もワシも)'],
+    hit: ['隙ありか…', '(替え玉して出直す)'],
+    blown: ['のびる〜〜!!', '(麺もワシも宙を舞う)'],
     draw: drawMenzo,
   },
   {
@@ -118,7 +121,8 @@ const KEEPERS = [
     power: 0.38, swayAmp: 0.26, swayPeriod: 1800, diveSpeed: 0.0009, reactMs: 330, reach: 0.20, scale: 1.05,
     intro: ['筋肉は裏切らない', '(大胸筋で受け止める)'],
     save: ['ナイスマッスル!!', '(大胸筋キャッチ)'],
-    hit: ['筋肉が!?', '(裏切った…)'],
+    hit: ['筋肉の死角…!', '(そこは盲点だった)'],
+    blown: ['マッスルフライ!!', '(いい風だ…)'],
     draw: drawMuscle,
   },
   {
@@ -126,7 +130,8 @@ const KEEPERS = [
     power: 0.30, swayAmp: 0.18, swayPeriod: 1900, diveSpeed: 0.0007, reactMs: 300, reach: 0.30, scale: 1.0,
     intro: ['私は壁だ', '(文字どおり)'],
     save: ['カチッ', '(壁に穴は無い)'],
-    hit: ['壁が…!', '(崩れた…)'],
+    hit: ['壁に穴が…', '(リフォームが必要だ)'],
+    blown: ['壁ごと!?', '(工事費を請求する)'],
     draw: drawKabelmann,
   },
   {
@@ -134,7 +139,8 @@ const KEEPERS = [
     power: 0.35, swayAmp: 0.42, swayPeriod: 1300, diveSpeed: 0.0013, reactMs: 280, reach: 0.26, scale: 1.0,
     intro: ['リズムに乗りな', '(腕は伸びるぜ)'],
     save: ['ビヨーン', '(届いちゃうんだな)'],
-    hit: ['ノーリズム!?', '(読めなかった)'],
+    hit: ['ノーリズム!?', '(シンコペーションか…)'],
+    blown: ['ビヨーーーン!!', '(伸びたまま飛んでる)'],
     draw: drawGomgom,
   },
   {
@@ -142,7 +148,8 @@ const KEEPERS = [
     power: 0.50, swayAmp: 0.3, swayPeriod: 1400, diveSpeed: 0.0014, reactMs: 250, reach: 0.30, scale: 1.05,
     intro: ['腕は8本ある', '(どこに打つ気だ?)'],
     save: ['ぬるり', '(タコに死角なし)'],
-    hit: ['スミを吐くしか…', '(墨切れだ…)'],
+    hit: ['8本でも届かん…', '(9本目が要る)'],
+    blown: ['タコが宙を舞う!', '(茹でないで)'],
     draw: drawPulpo,
   },
   {
@@ -151,6 +158,7 @@ const KEEPERS = [
     intro: ['解析完了。', '(君のPK成功率: 2%)'],
     save: ['計算通り。', '(誤差0.00mm)'],
     hit: ['計算外…', '(再起動シマス…)'],
+    blown: ['システムクラッシュ!!', '(空ヲ飛ンデイマス)'],
     draw: drawRobot,
   },
   {
@@ -158,15 +166,17 @@ const KEEPERS = [
     power: 0.80, swayAmp: 0.34, swayPeriod: 1100, diveSpeed: 0.0019, reactMs: 150, reach: 0.32, scale: 1.15,
     intro: ['よくぞここまで来た', '(だがここまでだ)'],
     save: ['フハハハ!', '(絶望を知れ)'],
-    hit: ['バカな…!', '(魔王軍撤退ーッ)'],
+    hit: ['バカな…!', '(コースが見えなかった)'],
+    blown: ['魔王が飛ぶだと!?', '(城まで飛ばされた…)'],
     draw: drawMaou,
   },
   {
     name: 'ゴールの神', emoji: '🌌', country: '神々の国オリンポス', round: '神試合',
-    power: 9.99, swayAmp: 0.30, swayPeriod: 900, diveSpeed: 0.0022, reactMs: 120, reach: 0.34, scale: 1.3,
+    power: 9.99, swayAmp: 0.30, swayPeriod: 1150, diveSpeed: 0.0018, reactMs: 170, reach: 0.29, scale: 1.3,
     intro: ['我を抜く者、神となる', '(まぐれは通じぬ)'],
     save: ['────。', '(それが人の限界か)'],
     hit: ['見事。', '(人よ、神になれ)'],
+    blown: ['────!?', '(神が、飛ぶ…?)'],
     draw: drawGod,
   },
 ];
@@ -196,6 +206,8 @@ const STATE = {
 let state = STATE.TITLE;
 let stageIdx = 0;
 let hearts = 3;
+let loopCount = 0;    // 周回数 (0 = 1周目)
+let loopMissed = false;
 let best = 0;
 try { best = parseInt(localStorage.getItem('pk_best') || '0', 10) || 0; } catch (e) {}
 
@@ -221,6 +233,20 @@ let keeperPhase = Math.random() * Math.PI * 2;
 let keeperIdleX = 0;
 
 function K() { return KEEPERS[Math.min(stageIdx, TOTAL - 1)]; }
+
+// 周回補正込みの実効パラメータ。
+// 上限キャップにより「コーナーへの最速シュートが絶対に決まらない」強さには決してならない
+function kp(k) {
+  const l = loopCount;
+  return {
+    power: k.power >= 9 ? k.power : Math.min(k.power * (1 + l * 0.25), 0.9),
+    swayAmp: k.swayAmp,
+    swayPeriod: Math.max(k.swayPeriod / (1 + l * 0.10), 800),
+    diveSpeed: Math.min(k.diveSpeed * (1 + l * 0.12), 0.0019),
+    reactMs: Math.max(k.reactMs - l * 20, 150),
+    reach: Math.min(k.reach * (1 + l * 0.06), 0.31),
+  };
+}
 
 // ===== 図鑑・実績(localStorage) =====
 let zukan = new Set();
@@ -290,13 +316,19 @@ function openZukan() {
 }
 
 // ===== スコア =====
-function currentScore() { return stageIdx * 10 + hearts; }
+function totalBeaten() { return loopCount * TOTAL + stageIdx; }
+function currentScore() { return Math.min(totalBeaten() * 10 + hearts, 999); }
 function scoreLabel(s) {
   const beaten = Math.floor(s / 10);
   const hp = s % 10;
-  return beaten >= TOTAL ? `完全制覇 ❤️${hp}` : `第${beaten + 1}戦 ❤️${hp}`;
+  const loop = Math.floor(beaten / TOTAL);
+  const st = beaten % TOTAL;
+  const prefix = loop >= 1 ? `${loop + 1}周目 ` : '';
+  return `${prefix}第${st + 1}戦 ❤️${hp}`;
 }
 function rankTitle(beaten) {
+  if (beaten >= 30) return '生ける伝説';
+  if (beaten >= 20) return '神殺しの常連';
   if (beaten >= 10) return 'LEGEND';
   if (beaten >= 9) return '人類最強(神には届かず)';
   if (beaten >= 8) return '銀メダル';
@@ -582,7 +614,8 @@ function drawParticles() {
 
 // ===== ゲーム進行 =====
 function updateHUD() {
-  roundEl.textContent = stageIdx + 1;
+  const loopPrefix = loopCount >= 1 ? `${loopCount + 1}周目 ` : '';
+  roundEl.textContent = `${loopPrefix}第${stageIdx + 1}戦`;
   heartsEl.textContent = '❤️'.repeat(hearts) + '🖤'.repeat(3 - hearts);
   bestEl.textContent = best > 0 ? scoreLabel(best) : '—';
 }
@@ -592,6 +625,8 @@ function beginGame() {
   saveMeta();
   stageIdx = startStage;
   hearts = 3;
+  loopCount = 0;
+  loopMissed = false;
   goalBroken = false;
   keeperFX = null;
   shot = null;
@@ -602,18 +637,23 @@ function beginGame() {
   showIntro();
 }
 
-function showIntro() {
+function showIntro(newLoop) {
   const k = K();
   state = STATE.INTRO;
   shot = null;
   plan = null;
   keeperFX = null;
   goalBroken = false;
-  introRoundEl.textContent = `第${stageIdx + 1}戦・${k.round}`;
+  const loopPrefix = loopCount >= 1 ? `${loopCount + 1}周目 ` : '';
+  introRoundEl.textContent = newLoop
+    ? `🏆 優勝!! そして${loopCount + 1}周目へ…`
+    : `${loopPrefix}第${stageIdx + 1}戦・${k.round}`;
   introCountryEl.textContent = `VS ${k.country}`;
   introKeeperEl.textContent = `${k.emoji} GK ${k.name}`;
   introLineEl.textContent = `${k.intro[0]}${k.intro[1]}`;
-  document.querySelector('.intro-announce').textContent = pick(ANNOUNCE_LINES);
+  document.querySelector('.intro-announce').textContent = newLoop
+    ? '─ 世界は、二度目の伝説を求めた ─'
+    : pick(ANNOUNCE_LINES);
   introOverlay.classList.remove('hidden');
   updateHUD();
 }
@@ -642,7 +682,7 @@ function currentSpeed() { return tri(timeNow - phaseStart, 950); }
 function currentSize() { return tri(timeNow - phaseStart, 650); }
 
 function doShoot() {
-  const k = K();
+  const e = kp(K()); // 周回補正込み
   const { angle, speed, size } = plan;
 
   const flightMs = 900 - 500 * speed;
@@ -655,17 +695,17 @@ function doShoot() {
   const x0 = keeperIdleX;
   keeperDiveX0 = x0;
   const diveTargetX = Math.max(L.cx - L.goalHalf, Math.min(L.cx + L.goalHalf, targetX));
-  const moved = Math.max(0, flightMs - k.reactMs) * k.diveSpeed * L.goalHalf;
+  const moved = Math.max(0, flightMs - e.reactMs) * e.diveSpeed * L.goalHalf;
   const delta = diveTargetX - x0;
   const arrivalX = x0 + Math.max(-moved, Math.min(moved, delta));
-  const reached = Math.abs(arrivalX - targetX) < k.reach * L.goalHalf + ballDrawR * 0.8;
+  const reached = Math.abs(arrivalX - targetX) < e.reach * L.goalHalf + ballDrawR * 0.8;
 
   let outcome;
   if (Math.abs(off) > L.goalHalf - L.postW) {
     outcome = 'wide';
-  } else if (size >= 0.95 && ballPower > k.power) {
+  } else if (size >= 0.95 && ballPower > e.power) {
     outcome = 'demolish';
-  } else if (ballPower > k.power && reached) {
+  } else if (ballPower > e.power && reached) {
     outcome = 'blow';       // 正面で受けたが吹っ飛ぶ
   } else if (reached) {
     outcome = 'save';       // パワー負けでキャッチ
@@ -678,6 +718,7 @@ function doShoot() {
     sx: L.ballX, sy: L.ballY,
     tx: targetX, ty: L.goalBottom - L.goalH * (0.25 + speed * 0.55),
     r: ballDrawR, speed, size,
+    reactMs: e.reactMs, diveSpeed: e.diveSpeed,
     outcome, arrivalX, resolved: false,
   };
   fx.trail = [];
@@ -689,7 +730,23 @@ function doShoot() {
 function nextStage() {
   stageIdx++;
   if (stageIdx >= TOTAL) {
-    endGame(true);
+    // 周回クリア → 優勝演出をはさんで次の周へ (少し強くなった世界)
+    stats.clears++;
+    if (!loopMissed) stats.noMissClears++;
+    saveMeta();
+    loopCount++;
+    stageIdx = 0;
+    hearts = 3;
+    loopMissed = false;
+    setTimeout(() => {
+      showBanner('WORLD CHAMPION!!', '#f2b90c');
+      burstConfetti(W / 2, H * 0.35, 120);
+      playGoal();
+    }, 700);
+    setTimeout(() => {
+      updateHUD();
+      showIntro(true);
+    }, 2300);
   } else {
     setTimeout(() => showIntro(), 500);
   }
@@ -716,7 +773,7 @@ function resolveShot() {
     fx.shake = 1.6;
     fx.flash = 1;
     showBanner(pick(DEMOLISH_BANNERS), '#ffc93c');
-    speak(k.hit, 2200);
+    speak(k.blown, 2200);
     playBlow(true);
     vibrate([60, 40, 120]);
     state = STATE.GOAL;
@@ -728,7 +785,7 @@ function resolveShot() {
     fx.shake = 1;
     fx.flash = 1;
     showBanner(pick(BLOW_BANNERS), '#ffc93c');
-    speak(k.hit, 2000);
+    speak(k.blown, 2000);
     playBlow(false);
     vibrate([40, 30, 80]);
     state = STATE.GOAL;
@@ -746,6 +803,7 @@ function resolveShot() {
   } else {
     // save / wide → ハート-1
     hearts--;
+    loopMissed = true;
     updateHUD();
     fx.shake = 0.7;
     showBanner(o === 'save' ? 'SAVED!!' : 'WIDE!!', '#ff5a48');
@@ -765,47 +823,34 @@ function resolveShot() {
         }
       }, 1400);
     } else {
-      endGame(false);
+      endGame();
     }
   }
 }
 
-function endGame(cleared) {
+function endGame() {
   state = STATE.OVER;
   const sc = currentScore();
   if (sc > best) {
     best = sc;
     try { localStorage.setItem('pk_best', String(best)); } catch (e) {}
   }
-  if (cleared) {
-    stats.clears++;
-    if (hearts === 3) stats.noMissClears++;
-    saveMeta();
-  }
   setTimeout(() => {
     const k = K();
-    if (cleared) {
-      overOverlay.classList.add('clear');
-      overHeadEl.textContent = '世界の、その先へ。';
-      overReasonEl.textContent = '神を打ち抜き、伝説になった';
-      overCommentEl.textContent = `${KEEPERS[TOTAL - 1].hit[0]}${KEEPERS[TOTAL - 1].hit[1]}`;
-      burstConfetti(W / 2, H * 0.3, 120);
-      overTapEl.textContent = 'タップでもう一度伝説を';
-    } else {
-      overOverlay.classList.remove('clear');
-      overHeadEl.textContent = '日本、ここで散る…';
-      overReasonEl.textContent = `第${stageIdx + 1}戦 ${k.name} に敗北`;
-      overCommentEl.textContent = `${k.save[0]}${k.save[1]}`;
-      overTapEl.textContent = 'タップで再挑戦';
-    }
-    rankTitleEl.textContent = rankTitle(stageIdx);
+    const loopPrefix = loopCount >= 1 ? `${loopCount + 1}周目 ` : '';
+    overOverlay.classList.toggle('clear', loopCount >= 1); // 2周目以降で散っても金色の敬意を
+    overHeadEl.textContent = loopCount >= 1 ? '伝説、ここに眠る。' : '日本、ここで散る…';
+    overReasonEl.textContent = `${loopPrefix}第${stageIdx + 1}戦 ${k.name} に敗北`;
+    overCommentEl.textContent = `${k.save[0]}${k.save[1]}`;
+    overTapEl.textContent = 'タップで再挑戦';
+    rankTitleEl.textContent = rankTitle(totalBeaten());
     overScoreEl.textContent = scoreLabel(sc);
     overBestEl.textContent = scoreLabel(best);
     top10Badge.classList.add('hidden');
     overOverlay.classList.remove('hidden');
     updateHUD();
     autoSubmitScore(sc);
-  }, cleared ? 800 : 1000);
+  }, 1000);
 }
 
 // 1体以上抜いていたら自動でランキングに送信。TOP10入りならバッジ+自動表示
@@ -1490,9 +1535,9 @@ function drawKeeper() {
   let yOff = 0, spin = 0, alpha = 1;
 
   if (state === STATE.SHOOT && shot) {
-    // ダイブ(判定と同じ式)
+    // ダイブ(判定と同じ式・周回補正込みの値をshotから使う)
     const el = Math.min(shot.t, shot.dur);
-    const moved = Math.max(0, el - k.reactMs) * k.diveSpeed * L.goalHalf;
+    const moved = Math.max(0, el - shot.reactMs) * shot.diveSpeed * L.goalHalf;
     const delta = (shot.arrivalX !== undefined ? Math.max(L.cx - L.goalHalf, Math.min(L.cx + L.goalHalf, shot.tx)) : L.cx) - keeperDiveX0;
     const clamped = Math.max(-moved, Math.min(moved, delta));
     x = keeperDiveX0 + clamped;
@@ -1803,8 +1848,9 @@ function loop(t) {
 
   // スウェー
   const k = K();
-  keeperPhase += (dt / (k ? k.swayPeriod : 2000)) * Math.PI * 2;
-  keeperIdleX = L.cx + Math.sin(keeperPhase) * (k ? k.swayAmp : 0.3) * L.goalHalf;
+  const ke = k ? kp(k) : null;
+  keeperPhase += (dt / (ke ? ke.swayPeriod : 2000)) * Math.PI * 2;
+  keeperIdleX = L.cx + Math.sin(keeperPhase) * (ke ? ke.swayAmp : 0.3) * L.goalHalf;
 
   // キックモーション → 発射
   if (state === STATE.KICK && kickAnim && timeNow - kickAnim.startT >= 350) {
