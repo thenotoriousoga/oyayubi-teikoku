@@ -253,7 +253,7 @@ function gaugeSpeedup() {
 
 // ===== 図鑑・実績(localStorage) =====
 let zukan = new Set();
-let stats = { plays: 0, goals: 0, blows: 0, demolishes: 0, clears: 0, noMissClears: 0 };
+let stats = { plays: 0, goals: 0, blows: 0, demolishes: 0, clears: 0, noMissClears: 0, wides: 0, panenkas: 0 };
 try { zukan = new Set(JSON.parse(localStorage.getItem('pk_zukan') || '[]')); } catch (e) {}
 try { Object.assign(stats, JSON.parse(localStorage.getItem('pk_stats') || '{}')); } catch (e) {}
 
@@ -264,18 +264,117 @@ function saveMeta() {
   } catch (e) {}
 }
 
+// ===== スキン (バッジ報酬。将来は課金でも入手経路を増やせる設計) =====
+const BALL_SKINS = {
+  classic: { name: 'クラシック', base: ['#ffffff', '#eef0f2', '#b3bac2'], pattern: '#23272b' },
+  street:  { name: 'ストリート', base: ['#4a4a52', '#2b2b31', '#131316'], pattern: '#f2f0eb' },
+  flame:   { name: '炎のボール', base: ['#ffd27a', '#ff7a3c', '#c22e12'], pattern: '#7a1200' },
+  sakura:  { name: '桜ボール', base: ['#fff4f7', '#ffd6e2', '#f299b8'], pattern: '#d14b7d' },
+  gold:    { name: '黄金のボール', base: ['#fff3c4', '#ffd94d', '#c9971c'], pattern: '#6b4e00' },
+};
+const UNIFORM_SKINS = {
+  samurai: { name: 'サムライブルー', shirt: '#1440a0', number: '#ffffff' },
+  crimson: { name: '紅のエース', shirt: '#c62828', number: '#ffffff' },
+  neon:    { name: 'ネオン', shirt: '#16c95c', number: '#0c0c0e' },
+  dark:    { name: '漆黒', shirt: '#17171c', number: '#f2b90c' },
+  goldUni: { name: '黄金', shirt: '#f2b90c', number: '#17171c' },
+};
+
+let equippedBall = 'classic';
+let equippedUniform = 'samurai';
+try {
+  equippedBall = localStorage.getItem('pk_ball') || 'classic';
+  equippedUniform = localStorage.getItem('pk_uniform') || 'samurai';
+} catch (e) {}
+
+// reward: { type: 'ball'|'uniform', id } を持つバッジは達成でスキン解禁
 const ACHIEVEMENTS = [
-  { medal: '⚽', name: 'はじめの一撃', desc: '初ゴールを決める', cond: () => stats.goals >= 1 },
+  { medal: '⚽', name: 'はじめの一撃', desc: '初ゴールを決める', cond: () => stats.goals >= 1, reward: { type: 'ball', id: 'street' } },
   { medal: '🧨', name: '解体新書', desc: 'ゴールごと粉砕する', cond: () => stats.demolishes >= 1 },
-  { medal: '💥', name: '破壊神', desc: 'ゴール粉砕を10回', cond: () => stats.demolishes >= 10 },
+  { medal: '💥', name: '破壊神', desc: 'ゴール粉砕を10回', cond: () => stats.demolishes >= 10, reward: { type: 'ball', id: 'flame' } },
   { medal: '🌪', name: '台風の目', desc: 'キーパーを30回吹っ飛ばす', cond: () => stats.blows >= 30 },
-  { medal: '🌏', name: 'アジア突破', desc: '第5戦に到達する', cond: () => best >= 4 },
-  { medal: '🏆', name: '世界の頂', desc: '優勝する', cond: () => stats.clears >= 1 },
-  { medal: '👑', name: 'パーフェクト', desc: 'ノーミスで優勝する', cond: () => stats.noMissClears >= 1 },
+  { medal: '🌏', name: 'アジア突破', desc: '第5戦に到達する', cond: () => best >= 4, reward: { type: 'ball', id: 'sakura' } },
+  { medal: '🎯', name: 'パネンカ', desc: 'ど真ん中への軽いシュートでゴール', cond: () => stats.panenkas >= 1 },
+  { medal: '🚀', name: '宇宙開発', desc: '枠外に通算10回ふっとばす', cond: () => stats.wides >= 10, reward: { type: 'uniform', id: 'neon' } },
+  { medal: '🥅', name: 'ゴールハンター', desc: '通算50ゴール', cond: () => stats.goals >= 50, reward: { type: 'uniform', id: 'crimson' } },
+  { medal: '🤖', name: 'ゴールマシン', desc: '通算200ゴール', cond: () => stats.goals >= 200 },
+  { medal: '🎖', name: 'ベスト8の男', desc: '第7戦に到達する', cond: () => best >= 6 },
+  { medal: '👹', name: '魔王討伐', desc: '神試合に到達する', cond: () => best >= 9, reward: { type: 'uniform', id: 'dark' } },
+  { medal: '🏆', name: '世界の頂', desc: '優勝する', cond: () => stats.clears >= 1, reward: { type: 'ball', id: 'gold' } },
+  { medal: '👑', name: 'パーフェクト', desc: 'ノーミスで優勝する', cond: () => stats.noMissClears >= 1, reward: { type: 'uniform', id: 'goldUni' } },
+  { medal: '🔁', name: '神殺しの常連', desc: '2周目もクリアする', cond: () => best >= 20 },
   { medal: '🎫', name: '常連', desc: '通算20回プレイする', cond: () => stats.plays >= 20 },
+  { medal: '💯', name: '百戦錬磨', desc: '通算100回プレイする', cond: () => stats.plays >= 100 },
 ];
 
+// スキンが解禁済みか (対応バッジの達成状況から動的に判定)
+function skinUnlocked(type, id) {
+  if ((type === 'ball' && id === 'classic') || (type === 'uniform' && id === 'samurai')) return true;
+  const a = ACHIEVEMENTS.find((x) => x.reward && x.reward.type === type && x.reward.id === id);
+  return a ? a.cond() : false;
+}
+
+function equipSkin(type, id) {
+  if (!skinUnlocked(type, id)) return;
+  if (type === 'ball') {
+    equippedBall = id;
+    try { localStorage.setItem('pk_ball', id); } catch (e) {}
+  } else {
+    equippedUniform = id;
+    try { localStorage.setItem('pk_uniform', id); } catch (e) {}
+  }
+}
+
+// 装備中スキンが未解禁 (別端末など) ならデフォルトに戻す
+if (!BALL_SKINS[equippedBall] || !skinUnlocked('ball', equippedBall)) equippedBall = 'classic';
+if (!UNIFORM_SKINS[equippedUniform] || !skinUnlocked('uniform', equippedUniform)) equippedUniform = 'samurai';
+
+function renderLocker() {
+  const build = (type, skins, equippedId, containerId) => {
+    const el = document.getElementById(containerId);
+    el.innerHTML = '';
+    for (const [id, s] of Object.entries(skins)) {
+      const unlocked = skinUnlocked(type, id);
+      const chip = document.createElement('button');
+      chip.className = 'skin-chip' + (unlocked ? '' : ' locked') + (id === equippedId ? ' equipped' : '');
+      const sw = document.createElement('span');
+      sw.className = 'skin-swatch' + (type === 'uniform' ? ' shirt' : '');
+      sw.style.background = type === 'ball'
+        ? `radial-gradient(circle at 35% 35%, ${s.base[0]}, ${s.base[1]} 55%, ${s.base[2]})`
+        : s.shirt;
+      const nm = document.createElement('span');
+      nm.className = 'skin-name';
+      nm.textContent = unlocked ? s.name : '🔒 ' + s.name;
+      chip.append(sw, nm);
+      if (!unlocked) {
+        const a = ACHIEVEMENTS.find((x) => x.reward && x.reward.type === type && x.reward.id === id);
+        if (a) {
+          const cond = document.createElement('span');
+          cond.className = 'skin-cond';
+          cond.textContent = `「${a.name}」で解禁`;
+          chip.append(cond);
+        }
+      } else if (id === equippedId) {
+        const eq = document.createElement('span');
+        eq.className = 'skin-cond';
+        eq.textContent = 'そうび中';
+        chip.append(eq);
+      }
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!unlocked) return;
+        equipSkin(type, id);
+        renderLocker();
+      });
+      el.appendChild(chip);
+    }
+  };
+  build('ball', BALL_SKINS, equippedBall, 'ball-skins');
+  build('uniform', UNIFORM_SKINS, equippedUniform, 'uniform-skins');
+}
+
 function openZukan() {
+  renderLocker();
   zukanGrid.innerHTML = '';
   KEEPERS.forEach((k, i) => {
     const card = document.createElement('div');
@@ -312,6 +411,13 @@ function openZukan() {
     ds.className = 'ach-desc';
     ds.textContent = a.desc;
     box.append(nm, ds);
+    if (a.reward) {
+      const rw = document.createElement('div');
+      rw.className = 'ach-reward';
+      const skinName = a.reward.type === 'ball' ? BALL_SKINS[a.reward.id].name : UNIFORM_SKINS[a.reward.id].name;
+      rw.textContent = `🎁 ${skinName}`;
+      box.append(rw);
+    }
     row.append(medal, box);
     achievementsEl.appendChild(row);
   }
@@ -763,7 +869,15 @@ function resolveShot() {
     stats.goals++;
     if (o === 'blow') stats.blows++;
     if (o === 'demolish') { stats.demolishes++; stats.blows++; }
+    // パネンカ: ど真ん中への軽いシュートを沈めた
+    if (o === 'goal' && Math.abs(shot.tx - L.cx) < L.goalHalf * 0.18 && shot.speed <= 0.45) {
+      stats.panenkas++;
+    }
     zukan.add(stageIdx);
+    saveMeta();
+  }
+  if (o === 'wide') {
+    stats.wides++;
     saveMeta();
   }
 
@@ -1620,17 +1734,18 @@ function drawBall() {
   drawSoccerBall(x, y, r, shot ? timeNow / 90 : 0);
 }
 
-// 本物っぽいサッカーボール(五角形パターン+立体感、rotで転がる)
+// 本物っぽいサッカーボール(五角形パターン+立体感、rotで転がる)。装備スキンの配色で描く
 function drawSoccerBall(x, y, r, rot) {
+  const skin = BALL_SKINS[equippedBall] || BALL_SKINS.classic;
   ctx.save();
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.clip();
   // 球体の陰影
   const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r * 1.1);
-  g.addColorStop(0, '#ffffff');
-  g.addColorStop(0.7, '#eef0f2');
-  g.addColorStop(1, '#b3bac2');
+  g.addColorStop(0, skin.base[0]);
+  g.addColorStop(0.7, skin.base[1]);
+  g.addColorStop(1, skin.base[2]);
   ctx.fillStyle = g;
   ctx.fillRect(x - r, y - r, r * 2, r * 2);
 
@@ -1645,27 +1760,29 @@ function drawSoccerBall(x, y, r, rot) {
     ctx.closePath();
   };
 
-  // 中央の黒五角形(回転で少し流れる)
+  // 中央の五角形(回転で少し流れる)
   const cxp = x + Math.cos(rot) * r * 0.16;
   const cyp = y + Math.sin(rot * 0.7) * r * 0.1;
-  ctx.fillStyle = '#23272b';
+  ctx.fillStyle = skin.pattern;
   pent(cxp, cyp, r * 0.3, rot * 0.6);
   ctx.fill();
 
   // 周囲の五角形(球の縁で見切れる)+縫い目
-  ctx.strokeStyle = 'rgba(35, 39, 43, 0.45)';
+  ctx.strokeStyle = skin.pattern;
   ctx.lineWidth = Math.max(1, r * 0.05);
   for (let i = 0; i < 5; i++) {
     const a = rot * 0.6 + (i * Math.PI * 2) / 5;
     const px = cxp + Math.cos(a) * r * 0.88;
     const py = cyp + Math.sin(a) * r * 0.88;
-    ctx.fillStyle = '#23272b';
+    ctx.fillStyle = skin.pattern;
     pent(px, py, r * 0.26, a + 0.5);
     ctx.fill();
+    ctx.globalAlpha = 0.45;
     ctx.beginPath();
     ctx.moveTo(cxp + Math.cos(a) * r * 0.3, cyp + Math.sin(a) * r * 0.3);
     ctx.lineTo(px - Math.cos(a) * r * 0.24, py - Math.sin(a) * r * 0.24);
     ctx.stroke();
+    ctx.globalAlpha = 1;
   }
   ctx.restore();
 
@@ -1730,14 +1847,15 @@ function drawKicker() {
   ctx.roundRect(-w * 0.34, -sz * 0.42, w * 0.68, sz * 0.14, w * 0.08);
   ctx.fill();
 
-  // ユニフォーム(サムライブルー)
-  ctx.fillStyle = '#1440a0';
+  // ユニフォーム(装備スキンの色)
+  const uni = UNIFORM_SKINS[equippedUniform] || UNIFORM_SKINS.samurai;
+  ctx.fillStyle = uni.shirt;
   ctx.beginPath();
   ctx.roundRect(-w * 0.38, -sz * 0.7, w * 0.76, sz * 0.31, w * 0.12);
   ctx.fill();
 
   // 腕
-  ctx.strokeStyle = '#1440a0';
+  ctx.strokeStyle = uni.shirt;
   ctx.lineWidth = w * 0.17;
   const aLen = w * 0.6;
   let armAngle = 0.35; // 通常: やや開いて下げる
@@ -1755,7 +1873,7 @@ function drawKicker() {
   }
 
   // 背番号10
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = uni.number;
   ctx.font = `800 ${Math.round(sz * 0.15)}px 'M PLUS Rounded 1c', sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
