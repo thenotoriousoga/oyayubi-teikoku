@@ -3,96 +3,205 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b1c33">
-  <title>ゲームひろば</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <meta name="theme-color" content="#071a12">
+  <title>オヤユビ帝国</title>
+  <meta name="description" content="親指ひとつで、世界を獲れ。スマホでサクッと遊べるミニゲーム帝国。">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👍</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --pitch-night: #071a12;
+      --night-sky: #0b2a4a;
+      --floodlight: #f2fbf4;
+      --banana: #ffc93c;
+      --gorilla-red: #ff5a48;
+      --turf: #2e9e4f;
+      --font-display: 'Mochiy Pop One', 'Hiragino Kaku Gothic ProN', sans-serif;
+      --font-body: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', sans-serif;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     html, body {
       min-height: 100%;
-      background: linear-gradient(180deg, #0b1c33 0%, #14304f 60%, #1a3a5c 100%);
-      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
-      color: #fff;
+      background:
+        radial-gradient(120% 60% at 50% -10%, var(--night-sky) 0%, transparent 60%),
+        var(--pitch-night);
+      font-family: var(--font-body);
+      color: var(--floodlight);
       -webkit-tap-highlight-color: transparent;
     }
+
     main {
       max-width: 480px;
       margin: 0 auto;
-      padding: calc(env(safe-area-inset-top, 0px) + 40px) 20px 60px;
+      padding: calc(env(safe-area-inset-top, 0px) + 48px) 20px 64px;
     }
+
+    /* ===== 帝国の紋章 ===== */
+    .crest {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 40px;
+    }
+
+    .crest-thumb {
+      font-size: 54px;
+      line-height: 1;
+      filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+      animation: thumb-stamp 0.5s cubic-bezier(0.2, 2.2, 0.4, 1) both;
+    }
+
+    @keyframes thumb-stamp {
+      0%   { transform: scale(2.4) rotate(-14deg); opacity: 0; }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+
     h1 {
-      text-align: center;
-      font-size: clamp(32px, 10vw, 44px);
-      font-weight: 900;
-      letter-spacing: 0.04em;
-      margin-bottom: 8px;
+      font-family: var(--font-display);
+      font-size: clamp(38px, 12vw, 56px);
+      letter-spacing: 0.02em;
+      color: var(--banana);
+      -webkit-text-stroke: 2px rgba(0, 0, 0, 0.35);
+      text-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 10px 26px rgba(0, 0, 0, 0.5);
+      transform: rotate(-2deg);
     }
-    .subtitle {
-      text-align: center;
-      color: rgba(255, 255, 255, 0.65);
+
+    .tagline {
       font-size: 14px;
-      margin-bottom: 32px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      color: rgba(242, 251, 244, 0.75);
     }
+
+    /* ===== ゲーム一覧 ===== */
+    .section-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.3em;
+      color: var(--turf);
+      margin-bottom: 12px;
+    }
+
     .games {
       display: grid;
       gap: 16px;
     }
+
     .game-card {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 16px;
-      background: rgba(255, 255, 255, 0.07);
+      background: rgba(255, 255, 255, 0.06);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 18px;
+      border-radius: 20px;
       padding: 18px;
       text-decoration: none;
       color: inherit;
-      transition: transform 0.15s, background 0.15s;
+      transition: transform 0.15s, background 0.15s, border-color 0.15s;
+      overflow: hidden;
     }
-    .game-card:active {
-      transform: scale(0.97);
-      background: rgba(255, 255, 255, 0.13);
-    }
-    .game-icon {
-      font-size: 44px;
-      line-height: 1;
+
+    .game-card::after {
+      content: '▶';
+      margin-left: auto;
+      font-size: 13px;
+      color: var(--banana);
       flex-shrink: 0;
     }
-    .game-info h2 {
-      font-size: 19px;
-      font-weight: 800;
-      margin-bottom: 4px;
+
+    .game-card:hover,
+    .game-card:focus-visible {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 201, 60, 0.5);
     }
+
+    .game-card:active {
+      transform: scale(0.97);
+    }
+
+    .game-icon {
+      font-size: 46px;
+      line-height: 1;
+      flex-shrink: 0;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+    }
+
+    .game-info h2 {
+      font-family: var(--font-display);
+      font-size: 21px;
+      margin-bottom: 4px;
+      color: var(--floodlight);
+    }
+
     .game-info p {
       font-size: 13px;
-      color: rgba(255, 255, 255, 0.7);
-      line-height: 1.6;
+      font-weight: 700;
+      color: rgba(242, 251, 244, 0.7);
+      line-height: 1.7;
     }
-    .coming {
-      opacity: 0.45;
-      pointer-events: none;
+
+    .game-tag {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--banana);
+      background: rgba(255, 201, 60, 0.12);
+      border: 1px solid rgba(255, 201, 60, 0.4);
+      border-radius: 999px;
+      padding: 3px 10px;
     }
-    .coming .game-info h2::after {
-      content: " (準備中)";
+
+    footer {
+      margin-top: 48px;
+      text-align: center;
       font-size: 12px;
-      color: #7fd4ff;
+      font-weight: 700;
+      color: rgba(242, 251, 244, 0.45);
+      line-height: 1.9;
+    }
+
+    a:focus-visible {
+      outline: 3px solid var(--banana);
+      outline-offset: 3px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .crest-thumb { animation: none; }
     }
   </style>
 </head>
 <body>
   <main>
-    <h1>🎮 ゲームひろば</h1>
-    <p class="subtitle">スマホでサクッと遊べるミニゲーム集</p>
+    <header class="crest">
+      <div class="crest-thumb">👍</div>
+      <h1>オヤユビ帝国</h1>
+      <p class="tagline">親指ひとつで、世界を獲れ。</p>
+    </header>
+
+    <p class="section-label">PLAYABLE NOW</p>
     <div class="games">
       <a class="game-card" href="/pk/">
-        <span class="game-icon">⚽</span>
+        <span class="game-icon">🦍</span>
         <span class="game-info">
-          <h2>PK対決!</h2>
-          <p>スワイプでシュート!キーパーをかわして連続ゴールを狙え。</p>
+          <h2>PKゴリラ</h2>
+          <p>伝説のGKウホ田ウホ夫からゴールを奪え。動きを見て、逆を突くべし。</p>
+          <span class="game-tag">⚽ 観察力と度胸</span>
         </span>
       </a>
       <!-- 新しいゲームはフォルダを作ってここにカードを追加 -->
     </div>
+
+    <footer>
+      帝国は拡大中。新しい遊びが増える予定ウホ。<br>
+      🦍 ウホ田ウホ夫は元気に営業中
+    </footer>
   </main>
 </body>
 </html>
