@@ -480,7 +480,7 @@ function vibrate(ms) {
 // 各国の実況風ゴールコール (英/西/葡/伊)
 const GOAL_BANNERS = ['GOOOOAL!!', '¡GOLAZO!!', 'GOLAÇO!!', 'CHE GOL!!', '¡GOOOOOL!!', 'MAMMA MIA!!', 'BELLISSIMO!!'];
 const BLOW_BANNERS = ['SMAAASH!!', '¡BOMBAZO!!', 'KNOCKOUT!!'];
-const DEMOLISH_BANNERS = ['ゴールごと粉砕!!', 'GOAL BREAKER!!'];
+const DEMOLISH_BANNERS = ['GOAL BREAKER!!', 'DEMOLITION!!', 'NO MERCY!!'];
 
 // One Shot スピリットのオリジナルライン (狙い中)
 const AIM_LINES = [
@@ -748,7 +748,7 @@ function resolveShot() {
     hearts--;
     updateHUD();
     fx.shake = 0.7;
-    showBanner(o === 'save' ? 'SAVE!' : '枠の外!', '#ff5a48');
+    showBanner(o === 'save' ? 'SAVED!!' : 'WIDE!!', '#ff5a48');
     if (o === 'save') speak(k.save, 2000);
     playFail();
     vibrate(120);
