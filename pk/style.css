@@ -3,8 +3,9 @@
   --night-sky: #0b2a4a;
   --floodlight: #f2fbf4;
   --banana: #ffc93c;
-  --gorilla-red: #ff5a48;
+  --danger: #ff5a48;
   --turf: #2e9e4f;
+  --font-logo: 'Archivo Black', sans-serif;
   --font-display: 'Mochiy Pop One', 'Hiragino Kaku Gothic ProN', sans-serif;
   --font-body: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', sans-serif;
 }
@@ -45,7 +46,7 @@ html, body {
   right: 0;
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   pointer-events: none;
   z-index: 5;
 }
@@ -55,20 +56,24 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: var(--floodlight);
   font-size: 13px;
-  font-weight: 700;
-  padding: 6px 14px;
+  font-weight: 800;
+  padding: 6px 13px;
   border-radius: 999px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 .hud-item span {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 15px;
   color: var(--banana);
-  margin-left: 2px;
 }
 
-/* ===== ウホ田のふきだし ===== */
+.hearts-item span {
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+/* ===== ふきだし ===== */
 #bubble {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 52px);
@@ -86,6 +91,7 @@ html, body {
   transition: opacity 0.18s, transform 0.18s;
   pointer-events: none;
   white-space: nowrap;
+  max-width: 92vw;
 }
 
 #bubble::after {
@@ -104,9 +110,9 @@ html, body {
   transform: translateX(-50%) scale(0.7);
 }
 
-#bubble-uho {
+#bubble-main {
   font-family: var(--font-display);
-  font-size: 19px;
+  font-size: 17px;
 }
 
 #bubble-sub {
@@ -118,12 +124,12 @@ html, body {
 /* ===== バナー・ヒント ===== */
 #banner {
   position: fixed;
-  top: 34%;
+  top: 33%;
   left: 0;
   right: 0;
   text-align: center;
   font-family: var(--font-display);
-  font-size: clamp(40px, 13vw, 76px);
+  font-size: clamp(36px, 11vw, 70px);
   color: var(--banana);
   -webkit-text-stroke: 2px rgba(0, 0, 0, 0.55);
   text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
@@ -151,9 +157,10 @@ html, body {
   right: 0;
   text-align: center;
   color: var(--floodlight);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
   pointer-events: none;
   z-index: 5;
   opacity: 0;
@@ -162,12 +169,6 @@ html, body {
 
 #hint.show {
   opacity: 1;
-  animation: hint-bob 1.4s ease-in-out infinite;
-}
-
-@keyframes hint-bob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-8px); }
 }
 
 /* ===== オーバーレイ共通 ===== */
@@ -178,8 +179,8 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  background: rgba(3, 12, 8, 0.78);
+  gap: 15px;
+  background: rgba(3, 12, 8, 0.8);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   color: var(--floodlight);
@@ -201,41 +202,88 @@ html, body {
 }
 
 .logo {
+  font-family: var(--font-logo);
+  font-style: italic;
+  font-size: clamp(54px, 18vw, 100px);
+  line-height: 1.05;
+  color: #fff;
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 0 24px rgba(255, 201, 60, 0.45),
+    4px 4px 0 var(--banana),
+    0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.logo-sub {
   font-family: var(--font-display);
-  font-size: clamp(52px, 17vw, 96px);
-  line-height: 1.1;
+  font-size: 15px;
   color: var(--banana);
-  -webkit-text-stroke: 2.5px rgba(0, 0, 0, 0.4);
-  text-shadow: 0 8px 0 rgba(0, 0, 0, 0.35), 0 12px 30px rgba(0, 0, 0, 0.5);
-  transform: rotate(-3deg);
-}
-
-.vs-line {
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.vs {
-  font-family: var(--font-display);
-  color: var(--gorilla-red);
-  font-size: 20px;
-  padding: 0 4px;
+  letter-spacing: 0.3em;
 }
 
 .rules {
   font-size: 14px;
-  line-height: 1.9;
+  line-height: 2;
   color: rgba(242, 251, 244, 0.88);
 }
 
-.overlay h2 {
+.rules b {
+  color: var(--banana);
+}
+
+/* ===== 対戦カード ===== */
+#intro-overlay {
+  background: rgba(3, 12, 8, 0.88);
+}
+
+#intro-overlay h2 {
   font-family: var(--font-display);
-  font-size: clamp(30px, 9vw, 52px);
-  color: var(--gorilla-red);
+  font-size: clamp(28px, 8.5vw, 46px);
+  color: var(--floodlight);
   text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
 }
 
-/* ===== ゲームオーバー(称号) ===== */
+#intro-keeper {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 6vw, 30px);
+  color: var(--banana);
+}
+
+#intro-line {
+  font-size: 14px;
+  font-weight: 800;
+  color: #26221f;
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 20px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.intro-announce {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--danger);
+}
+
+/* ===== 結果画面 ===== */
+.overlay h2 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 8.5vw, 48px);
+  color: var(--danger);
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.overlay.clear h2 {
+  color: var(--banana);
+}
+
+#over-reason {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(242, 251, 244, 0.85);
+}
+
 .rank-title-wrap {
   display: flex;
   flex-direction: column;
@@ -255,18 +303,18 @@ html, body {
 
 #rank-title {
   font-family: var(--font-display);
-  font-size: clamp(22px, 7vw, 34px);
+  font-size: clamp(20px, 6.5vw, 32px);
   color: var(--banana);
 }
 
 .over-score {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .over-score span {
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: 24px;
   color: var(--banana);
   margin-left: 4px;
 }
@@ -293,7 +341,7 @@ html, body {
 
 .tap-label {
   margin-top: 8px;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 800;
   color: #7fd4ff;
   animation: tap-blink 1.2s ease-in-out infinite;
@@ -390,8 +438,8 @@ html, body {
   flex-direction: column;
   gap: 8px;
   width: 100%;
-  max-width: 300px;
-  font-size: 16px;
+  max-width: 320px;
+  font-size: 15px;
   font-weight: 800;
 }
 
@@ -422,7 +470,7 @@ button:focus-visible, input:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #hint.show, .tap-label {
+  .tap-label {
     animation: none;
   }
 }

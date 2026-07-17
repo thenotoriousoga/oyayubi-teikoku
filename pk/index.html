@@ -4,55 +4,66 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#071a12">
-  <title>PKゴリラ</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦍</text></svg>">
+  <title>One Shot</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <canvas id="game"></canvas>
 
   <div id="hud">
-    <div class="hud-item">連続ゴール <span id="score">0</span></div>
-    <div class="hud-item">ベスト <span id="best">0</span></div>
+    <div class="hud-item">第<span id="round">1</span>戦</div>
+    <div class="hud-item hearts-item"><span id="hearts">❤️❤️❤️</span></div>
+    <div class="hud-item">ベスト <span id="best">—</span></div>
   </div>
 
-  <div id="bubble" class="hidden"><span id="bubble-uho">ウホ</span><span id="bubble-sub">(どうせ右だろ)</span></div>
+  <div id="bubble" class="hidden"><span id="bubble-main">わん!</span><span id="bubble-sub">(…)</span></div>
 
   <div id="banner"></div>
-  <div id="hint">⚽ ウホ田の逆へスワイプ!</div>
+  <div id="hint">たった一度のチャンス、逃すな。</div>
 
   <div id="start-overlay" class="overlay">
-    <div class="eyebrow">PENALTY SHOOTOUT</div>
-    <h1 class="logo">PKゴリラ</h1>
-    <p class="vs-line">キミ <span class="vs">VS</span> 伝説のGK ウホ田ウホ夫</p>
-    <p class="rules">ウホ田の動きをよく見て、ガラ空きのコースへスワイプ。<br>速いスワイプほど強烈。ただし強すぎると<br>バーのはるか上へ飛んでいくウホ。</p>
+    <div class="eyebrow">ONE CHANCE, ONE BALL</div>
+    <h1 class="logo">One Shot</h1>
+    <p class="logo-sub">一度きりの11メートル</p>
+    <p class="rules">日本代表、世界への挑戦。<br>タップ3回 ─ <b>方向・速さ・大きさ</b> ─ に全てを込めろ。<br>パワーが上回れば、キーパーごと吹っ飛ぶ。</p>
     <button id="show-rank-start" class="rank-btn">🏆 世界ランキング</button>
     <div class="tap-label">タップでキックオフ</div>
   </div>
 
+  <div id="intro-overlay" class="overlay hidden">
+    <div class="eyebrow" id="intro-round">第1戦・壮行試合</div>
+    <h2 id="intro-country">VS ちびっこ幼稚園選抜</h2>
+    <div id="intro-keeper">🐶 GK 子犬のポチ</div>
+    <p id="intro-line">わん!(あそんでくれるの?)</p>
+    <p class="intro-announce">─ これを決めれば、勝利 ─</p>
+    <div class="tap-label">タップでピッチへ</div>
+  </div>
+
   <div id="over-overlay" class="overlay hidden">
-    <h2 id="over-reason">セーブされた!</h2>
+    <h2 id="over-head">日本、ここで散る…</h2>
+    <p id="over-reason">第1戦 子犬のポチ に敗北</p>
     <div class="rank-title-wrap">
       <span class="rank-eyebrow">キミの称号</span>
       <div id="rank-title">見学者</div>
     </div>
-    <div class="over-score">連続ゴール <span id="over-score">0</span></div>
-    <div class="over-best">ベスト <span id="over-best">0</span></div>
-    <div id="over-comment">ウホ(また来いよ)</div>
+    <div class="over-score">記録 <span id="over-score">—</span></div>
+    <div class="over-best">ベスト <span id="over-best">—</span></div>
+    <div id="over-comment">わん!</div>
     <div id="rank-entry" class="hidden">
       <input id="name-input" maxlength="10" placeholder="なまえ (10文字まで)" autocomplete="off">
       <button id="submit-score">🏆 世界ランキングに登録</button>
     </div>
     <button id="show-rank-over" class="rank-btn">ランキングを見る</button>
-    <div class="tap-label">タップで再戦</div>
+    <div class="tap-label" id="over-tap">タップで再挑戦</div>
   </div>
 
   <div id="rank-overlay" class="overlay hidden">
     <h2 class="rank-heading">🏆 世界ランキング</h2>
-    <p class="rank-sub">ウホ田を最も泣かせた者たち TOP10</p>
+    <p class="rank-sub">最も遠くまで行った者たち TOP10</p>
     <ol id="rank-list"></ol>
     <div class="tap-label">タップで閉じる</div>
   </div>
