@@ -518,21 +518,204 @@ function drumHat(t, open) {
   n.start(t); n.stop(t + 0.1);
 }
 
-// 88BPM・8分音符ステップ。ブーンバップの基本形
+// 80BPM・8分音符ステップ。ブーンバップの基本形
 let beatNextT = 0;
 let beatStep = 0;
-const BEAT_8TH = 60 / 88 / 2; // ≒0.34s
+const BEAT_8TH = 60 / 80 / 2; // ≒0.34s
+
+// =================================================================
+// 🎹 1. 追加のトラップ音源・FX関数
+// =================================================================
+
+function playPiano(freq, time, vol = 0.04) {
+  if (!AC) return;
+  const osc = AC.createOscillator();
+  const gain = AC.createGain();
+  osc.type = 'triangle'; 
+  osc.frequency.setValueAtTime(freq, time);
+  gain.gain.setValueAtTime(0.001, time);
+  gain.gain.linearRampToValueAtTime(vol, time + 0.15); 
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 1.2); 
+  osc.connect(gain);
+  gain.connect(AC.destination);
+  osc.start(time);
+  osc.stop(time + 1.2);
+}
+
+function play808(freq, time, vol = 0.25) {
+  if (!AC) return;
+  const osc = AC.createOscillator();
+  const gain = AC.createGain();
+  osc.type = 'sine'; 
+  osc.frequency.setValueAtTime(freq * 1.5, time);
+  osc.frequency.exponentialRampToValueAtTime(freq, time + 0.08);
+  gain.gain.setValueAtTime(vol, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.8); 
+  osc.connect(gain);
+  gain.connect(AC.destination);
+  osc.start(time);
+  osc.stop(time + 0.8);
+}
+
+function playBell(freq, time, vol = 0.01) { 
+  if (!AC) return;
+  const osc = AC.createOscillator();
+  const overTone = AC.createOscillator(); 
+  const gain = AC.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, time);
+  overTone.type = 'sine';
+  overTone.frequency.setValueAtTime(freq * 3.51, time); 
+  gain.gain.setValueAtTime(vol, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.6); 
+  osc.connect(gain);
+  overTone.connect(gain); 
+  gain.connect(AC.destination);
+  osc.start(time);
+  overTone.start(time);
+  osc.stop(time + 0.6);
+  overTone.stop(time + 0.6);
+}
+
+// 【新機能】ライザー（ブレイク直前の風切音）
+function playRiser(time, duration = 0.4, vol = 0.04) {
+  if (!AC) return;
+  const bufferSize = AC.sampleRate * duration;
+  const buffer = AC.createBuffer(1, bufferSize, AC.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+  const noise = AC.createBufferSource();
+  noise.buffer = buffer;
+  const filter = AC.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(300, time);
+  filter.frequency.exponentialRampToValueAtTime(8000, time + duration);
+  const gain = AC.createGain();
+  gain.gain.setValueAtTime(0.001, time);
+  gain.gain.linearRampToValueAtTime(vol, time + duration * 0.8);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+  noise.connect(filter); filter.connect(gain); gain.connect(AC.destination);
+  noise.start(time);
+}
+
+// 【新機能】チャカッ（スネア直前の装填音）
+function playChant(time, vol = 0.03) {
+  if (!AC) return;
+  const osc = AC.createOscillator();
+  const gain = AC.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(1500, time);
+  osc.frequency.exponentialRampToValueAtTime(100, time + 0.04);
+  gain.gain.setValueAtTime(vol, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+  osc.connect(gain); gain.connect(AC.destination);
+  osc.start(time); osc.stop(time + 0.04);
+}
+
+// 【新機能】レーザー音（4小節目のアクセント）
+function playLaser(freq, time, vol = 0.015) {
+  if (!AC) return;
+  const osc = AC.createOscillator();
+  const gain = AC.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(freq * 3, time);
+  osc.frequency.exponentialRampToValueAtTime(freq / 2, time + 0.15);
+  gain.gain.setValueAtTime(vol, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+  osc.connect(gain); gain.connect(AC.destination);
+  osc.start(time); osc.stop(time + 0.15);
+}
+
+// =================================================================
+// 🥁 2. メインのシーケンサー関数
+// =================================================================
 
 function scheduleBeat() {
   if (!AC) return;
   const now = AC.currentTime;
-  if (beatNextT < now - 0.5) { beatNextT = now + 0.05; } // 中断後の再開
+  if (beatNextT < now - 0.5) { beatNextT = now + 0.05; }
+
+  const stepTime = BEAT_8TH / 2; 
+
   while (beatNextT < now + 0.35) {
-    const s = beatStep % 8;
-    if (s === 0 || s === 5) drumKick(beatNextT);      // ドッ ・・ ドッ
-    if (s === 2 || s === 6) drumSnare(beatNextT);     // スネアは2・4拍
-    drumHat(beatNextT, s === 7);                      // ハットは刻み、小節末はオープン
-    beatNextT += BEAT_8TH;
+    const s = beatStep % 16; 
+    const measure = Math.floor(beatStep / 16);
+    const is8thMeasureEnd = (measure % 8 === 7 && s >= 12);
+
+    // --- FX: 4小節目（インデックス3）の頭にレーザーを隠し味で入れる ---
+    if (measure % 8 === 3 && s === 0) {
+      playLaser(600.00, beatNextT);
+    }
+
+    // --- FX: 8小節目のステップ8（スネアの位置）から、ステップ12のブレイクに向けてライザー始動！ ---
+    if (measure % 8 === 7 && s === 8) {
+      playRiser(beatNextT, stepTime * 4, 0.04); // 4ステップ分（約0.5秒）かけて上昇
+    }
+
+    // --- FX: スネアの直前（ステップ7）の裏拍（stepTime / 2）に「チャカッ」を仕込む ---
+    if (s === 7 && !is8thMeasureEnd) {
+      playChant(beatNextT + stepTime / 2);
+    }
+
+    // --- A. ピアノ（常時演奏） ---
+    if (s === 0) {
+      playPiano(220.00, beatNextT, 0.04); // Am
+      playPiano(261.63, beatNextT, 0.04); 
+      playPiano(329.63, beatNextT, 0.04); 
+    } else if (s === 8) {
+      playPiano(174.61, beatNextT, 0.04); // F
+      playPiano(261.63, beatNextT, 0.04); 
+      playPiano(349.23, beatNextT, 0.04); 
+    }
+
+    // --- B. シンセベル（常時演奏） ---
+    if (s === 4)  playBell(880.00, beatNextT, 0.01);  
+    if (s === 12) playBell(1046.50, beatNextT, 0.01); 
+    
+    // --- C. キック ＆ 808重低音ベース（8小節末はカット） ---
+    if (s === 0) {
+      drumKick(beatNextT);
+      play808(55.00, beatNextT, 0.25); 
+    } 
+    else if (s === 3) {
+      drumKick(beatNextT);
+      play808(48.99, beatNextT, 0.25); 
+    }
+    else if (s === 4) {
+      drumKick(beatNextT); 
+    }
+    else if (s === 11 && !is8thMeasureEnd) {
+      drumKick(beatNextT);
+      play808(58.27, beatNextT, 0.25); 
+    }
+    
+    // --- D. スネア（8小節末はカット） ---
+    if (s === 8) {
+      drumSnare(beatNextT);
+    } 
+    else if (s === 15 && Math.random() < 0.4 && !is8thMeasureEnd) {
+      drumSnare(beatNextT); 
+    }
+    
+    // --- E. ハイハット（8小節末はカット） ---
+    if (s === 6 || s === 14) {
+      if (!is8thMeasureEnd) {
+        drumHat(beatNextT);
+        drumHat(beatNextT + stepTime / 2); 
+      }
+    } else if (s === 11) {
+      const triplet = stepTime / 3;
+      drumHat(beatNextT);
+      drumHat(beatNextT + triplet);
+      drumHat(beatNextT + triplet * 2);
+    } else {
+      if (!is8thMeasureEnd) {
+        const isOpen = (s === 7 || s === 15);
+        drumHat(beatNextT, isOpen);
+      }
+    }
+    
+    beatNextT += stepTime;
     beatStep++;
   }
 }
