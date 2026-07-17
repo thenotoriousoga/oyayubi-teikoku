@@ -30,8 +30,12 @@
     <h1 class="logo">One Shot</h1>
     <p class="logo-sub">一度きりの11メートル</p>
     <p class="rules">日本代表、世界への挑戦。<br>タップ3回 ─ <b>方向・速さ・大きさ</b> ─ に全てを込めろ。<br>パワーが上回れば、キーパーごと吹っ飛ぶ。</p>
-    <button id="show-rank-start" class="rank-btn">🏆 世界ランキング</button>
-    <div class="tap-label">タップでキックオフ</div>
+    <input id="name-input" maxlength="10" placeholder="せんしゅ名を入力 (10文字まで)" autocomplete="off">
+    <div class="start-btns">
+      <button id="show-rank-start" class="rank-btn">🏆 世界ランキング</button>
+      <button id="show-zukan" class="rank-btn">📖 図鑑</button>
+    </div>
+    <div class="tap-label" id="start-tap">タップでキックオフ</div>
   </div>
 
   <div id="intro-overlay" class="overlay hidden">
@@ -53,12 +57,17 @@
     <div class="over-score">記録 <span id="over-score">—</span></div>
     <div class="over-best">ベスト <span id="over-best">—</span></div>
     <div id="over-comment">わん!</div>
-    <div id="rank-entry" class="hidden">
-      <input id="name-input" maxlength="10" placeholder="なまえ (10文字まで)" autocomplete="off">
-      <button id="submit-score">🏆 世界ランキングに登録</button>
-    </div>
+    <div id="top10-badge" class="hidden">🌏 世界TOP10入り!</div>
     <button id="show-rank-over" class="rank-btn">ランキングを見る</button>
     <div class="tap-label" id="over-tap">タップで再挑戦</div>
+  </div>
+
+  <div id="zukan-overlay" class="overlay scroll hidden">
+    <h2 class="rank-heading">📖 キーパー図鑑</h2>
+    <div id="zukan-grid"></div>
+    <h3 class="zukan-sub">🎖 実績</h3>
+    <div id="achievements"></div>
+    <div class="tap-label">タップで閉じる</div>
   </div>
 
   <div id="rank-overlay" class="overlay hidden">

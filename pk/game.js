@@ -24,11 +24,15 @@ const overCommentEl = document.getElementById('over-comment');
 const overTapEl = document.getElementById('over-tap');
 const rankOverlay = document.getElementById('rank-overlay');
 const rankListEl = document.getElementById('rank-list');
-const rankEntryEl = document.getElementById('rank-entry');
 const nameInput = document.getElementById('name-input');
-const submitBtn = document.getElementById('submit-score');
+const startTapEl = document.getElementById('start-tap');
+const top10Badge = document.getElementById('top10-badge');
 const showRankStartBtn = document.getElementById('show-rank-start');
 const showRankOverBtn = document.getElementById('show-rank-over');
+const showZukanBtn = document.getElementById('show-zukan');
+const zukanOverlay = document.getElementById('zukan-overlay');
+const zukanGrid = document.getElementById('zukan-grid');
+const achievementsEl = document.getElementById('achievements');
 const bubbleEl = document.getElementById('bubble');
 const bubbleMainEl = document.getElementById('bubble-main');
 const bubbleSubEl = document.getElementById('bubble-sub');
@@ -169,11 +173,25 @@ const KEEPERS = [
 
 const TOTAL = KEEPERS.length;
 
+// 図鑑用プロフィール(KEEPERSと同順)
+const PROFILES = [
+  '散歩とボールが大好き。止めても決められてもしっぽを振る。',
+  '将来の夢は日本代表。母ちゃんが毎試合ビデオ撮影している。',
+  '営業時間外だけゴールを守る。スープは企業秘密。',
+  '大胸筋・上腕二頭筋・僧帽筋の三枚看板で守る男。',
+  '職業は壁。趣味も壁。座右の銘は「無失点」。',
+  'サンバのリズムでしか動けない。腕の伸びは企業秘密。',
+  '海から来た8本腕の守護神。墨は最終手段。',
+  '演算能力は世界一。だが「まぐれ」だけは計算できない。',
+  '魔王軍のGK兼監督。負けたら魔王城で反省会。',
+  'ゴールという概念そのもの。抜いた者は神になるという。',
+];
+
 // ===== 状態 =====
 const STATE = {
   TITLE: 'title', INTRO: 'intro',
   AIM_DIR: 'aim_dir', AIM_POWER: 'aim_power', AIM_SIZE: 'aim_size',
-  RETRY: 'retry', SHOOT: 'shoot', GOAL: 'goal', OVER: 'over',
+  KICK: 'kick', RETRY: 'retry', SHOOT: 'shoot', GOAL: 'goal', OVER: 'over',
 };
 let state = STATE.TITLE;
 let stageIdx = 0;
@@ -183,6 +201,7 @@ try { best = parseInt(localStorage.getItem('pk_best') || '0', 10) || 0; } catch 
 
 let phaseStart = 0;   // 現在のゲージフェーズ開始時刻
 let plan = null;      // { angle, speed, size } 選択途中の値
+let kickAnim = null;  // キックモーション { startT }
 let shot = null;
 let keeperFX = null;  // 吹っ飛び演出 { type:'blow'|'demolish', dir, startT }
 let goalBroken = false;
@@ -202,6 +221,73 @@ let keeperPhase = Math.random() * Math.PI * 2;
 let keeperIdleX = 0;
 
 function K() { return KEEPERS[Math.min(stageIdx, TOTAL - 1)]; }
+
+// ===== 図鑑・実績(localStorage) =====
+let zukan = new Set();
+let stats = { plays: 0, goals: 0, blows: 0, demolishes: 0, clears: 0, noMissClears: 0 };
+try { zukan = new Set(JSON.parse(localStorage.getItem('pk_zukan') || '[]')); } catch (e) {}
+try { Object.assign(stats, JSON.parse(localStorage.getItem('pk_stats') || '{}')); } catch (e) {}
+
+function saveMeta() {
+  try {
+    localStorage.setItem('pk_zukan', JSON.stringify([...zukan]));
+    localStorage.setItem('pk_stats', JSON.stringify(stats));
+  } catch (e) {}
+}
+
+const ACHIEVEMENTS = [
+  { medal: '⚽', name: 'はじめの一撃', desc: '初ゴールを決める', cond: () => stats.goals >= 1 },
+  { medal: '🧨', name: '解体新書', desc: 'ゴールごと粉砕する', cond: () => stats.demolishes >= 1 },
+  { medal: '💥', name: '破壊神', desc: 'ゴール粉砕を10回', cond: () => stats.demolishes >= 10 },
+  { medal: '🌪', name: '台風の目', desc: 'キーパーを30回吹っ飛ばす', cond: () => stats.blows >= 30 },
+  { medal: '🌏', name: 'アジア突破', desc: '第5戦に到達する', cond: () => Math.floor(best / 10) >= 4 },
+  { medal: '🏆', name: '世界の頂', desc: '優勝する', cond: () => stats.clears >= 1 },
+  { medal: '👑', name: 'パーフェクト', desc: 'ノーミスで優勝する', cond: () => stats.noMissClears >= 1 },
+  { medal: '🎫', name: '常連', desc: '通算20回プレイする', cond: () => stats.plays >= 20 },
+];
+
+function openZukan() {
+  zukanGrid.innerHTML = '';
+  KEEPERS.forEach((k, i) => {
+    const card = document.createElement('div');
+    const unlocked = zukan.has(i);
+    card.className = 'z-card' + (unlocked ? '' : ' locked');
+    const emoji = document.createElement('div');
+    emoji.className = 'z-emoji';
+    emoji.textContent = unlocked ? k.emoji : '❓';
+    const name = document.createElement('div');
+    name.className = 'z-name';
+    name.textContent = unlocked ? k.name : '???';
+    const country = document.createElement('div');
+    country.className = 'z-country';
+    country.textContent = unlocked ? k.country : `第${i + 1}戦の相手`;
+    const prof = document.createElement('div');
+    prof.className = 'z-profile';
+    prof.textContent = unlocked ? PROFILES[i] : '倒すと解放される';
+    card.append(emoji, name, country, prof);
+    zukanGrid.appendChild(card);
+  });
+  achievementsEl.innerHTML = '';
+  for (const a of ACHIEVEMENTS) {
+    const done = a.cond();
+    const row = document.createElement('div');
+    row.className = 'ach' + (done ? ' done' : ' locked');
+    const medal = document.createElement('span');
+    medal.className = 'ach-medal';
+    medal.textContent = a.medal;
+    const box = document.createElement('div');
+    const nm = document.createElement('div');
+    nm.className = 'ach-name';
+    nm.textContent = a.name;
+    const ds = document.createElement('div');
+    ds.className = 'ach-desc';
+    ds.textContent = a.desc;
+    box.append(nm, ds);
+    row.append(medal, box);
+    achievementsEl.appendChild(row);
+  }
+  zukanOverlay.classList.remove('hidden');
+}
 
 // ===== スコア =====
 function currentScore() { return stageIdx * 10 + hearts; }
@@ -427,6 +513,8 @@ function updateHUD() {
 }
 
 function beginGame() {
+  stats.plays++;
+  saveMeta();
   stageIdx = startStage;
   hearts = 3;
   goalBroken = false;
@@ -483,7 +571,6 @@ function currentSpeed() { return tri(timeNow - phaseStart, 950); }
 function currentSize() { return tri(timeNow - phaseStart, 650); }
 
 function doShoot() {
-  hintEl.classList.remove('show');
   const k = K();
   const { angle, speed, size } = plan;
 
@@ -540,6 +627,15 @@ function nextStage() {
 function resolveShot() {
   const k = K();
   const o = shot.outcome;
+
+  // 図鑑・実績の記録
+  if (o === 'demolish' || o === 'blow' || o === 'goal') {
+    stats.goals++;
+    if (o === 'blow') stats.blows++;
+    if (o === 'demolish') { stats.demolishes++; stats.blows++; }
+    zukan.add(stageIdx);
+    saveMeta();
+  }
 
   if (o === 'demolish') {
     goalBroken = true;
@@ -610,6 +706,11 @@ function endGame(cleared) {
     best = sc;
     try { localStorage.setItem('pk_best', String(best)); } catch (e) {}
   }
+  if (cleared) {
+    stats.clears++;
+    if (hearts === 3) stats.noMissClears++;
+    saveMeta();
+  }
   setTimeout(() => {
     const k = K();
     if (cleared) {
@@ -629,13 +730,35 @@ function endGame(cleared) {
     rankTitleEl.textContent = rankTitle(stageIdx);
     overScoreEl.textContent = scoreLabel(sc);
     overBestEl.textContent = scoreLabel(best);
-    rankEntryEl.classList.toggle('hidden', sc < 10);
-    nameInput.value = savedName;
-    submitBtn.disabled = false;
-    submitBtn.textContent = '🏆 世界ランキングに登録';
+    top10Badge.classList.add('hidden');
     overOverlay.classList.remove('hidden');
     updateHUD();
+    autoSubmitScore(sc);
   }, cleared ? 800 : 1000);
+}
+
+// 1体以上抜いていたら自動でランキングに送信。TOP10入りならバッジ+自動表示
+async function autoSubmitScore(score) {
+  if (score < 10 || !savedName) return;
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: savedName, score }),
+    });
+    if (!r.ok) return;
+    const data = await r.json();
+    const top = data.top || [];
+    if (top.some((e) => e.name === savedName)) {
+      top10Badge.classList.remove('hidden');
+      setTimeout(() => {
+        if (state === STATE.OVER && !overOverlay.classList.contains('hidden')) {
+          rankOverlay.classList.remove('hidden');
+          renderRanking(top, savedName);
+        }
+      }, 900);
+    }
+  } catch (e) { /* オフライン時は静かにスキップ */ }
 }
 
 // ===== 入力 =====
@@ -654,19 +777,41 @@ window.addEventListener('pointerdown', (e) => {
   } else if (state === STATE.AIM_SIZE) {
     plan.size = Math.max(0.05, currentSize());
     playTap();
-    doShoot();
+    // キックモーションを挟んでから発射
+    hintEl.classList.remove('show');
+    state = STATE.KICK;
+    kickAnim = { startT: timeNow };
   }
 });
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 
-startOverlay.addEventListener('click', () => { ensureAudio(); beginGame(); });
+startOverlay.addEventListener('click', () => {
+  ensureAudio();
+  const name = nameInput.value.trim().slice(0, 10);
+  if (!name) {
+    startTapEl.textContent = '⚠️ せんしゅ名を入れて出場登録!';
+    nameInput.focus();
+    return;
+  }
+  savedName = name;
+  try { localStorage.setItem('pk_name', name); } catch (e) {}
+  beginGame();
+});
+nameInput.addEventListener('click', (e) => e.stopPropagation());
+nameInput.addEventListener('pointerdown', (e) => e.stopPropagation());
 overOverlay.addEventListener('click', () => { ensureAudio(); beginGame(); });
 introOverlay.addEventListener('click', () => { ensureAudio(); enterAim(); });
+showZukanBtn.addEventListener('click', (e) => { e.stopPropagation(); openZukan(); });
+zukanOverlay.addEventListener('click', (e) => {
+  e.stopPropagation();
+  zukanOverlay.classList.add('hidden');
+});
 
 // ===== オンラインランキング =====
 const API = '/api/scores';
 let savedName = '';
 try { savedName = localStorage.getItem('pk_name') || ''; } catch (e) {}
+nameInput.value = savedName;
 
 function renderRanking(top, highlightName) {
   rankListEl.innerHTML = '';
@@ -701,35 +846,9 @@ async function openRanking(highlightName) {
 
 showRankStartBtn.addEventListener('click', (e) => { e.stopPropagation(); openRanking(savedName); });
 showRankOverBtn.addEventListener('click', (e) => { e.stopPropagation(); openRanking(savedName); });
-rankEntryEl.addEventListener('click', (e) => e.stopPropagation());
 rankOverlay.addEventListener('click', (e) => {
   e.stopPropagation();
   rankOverlay.classList.add('hidden');
-});
-
-submitBtn.addEventListener('click', async (e) => {
-  e.stopPropagation();
-  const name = nameInput.value.trim().slice(0, 10);
-  if (!name) { nameInput.focus(); return; }
-  savedName = name;
-  try { localStorage.setItem('pk_name', name); } catch (err) {}
-  submitBtn.disabled = true;
-  submitBtn.textContent = '送信中...';
-  try {
-    const r = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, score: currentScore() }),
-    });
-    if (!r.ok) throw new Error();
-    const data = await r.json();
-    submitBtn.textContent = '登録した!';
-    rankOverlay.classList.remove('hidden');
-    renderRanking(data.top || [], name);
-  } catch (err) {
-    submitBtn.textContent = 'エラー… もう一度';
-    submitBtn.disabled = false;
-  }
 });
 
 // ===== 描画: 背景・ゴール =====
@@ -1360,23 +1479,162 @@ function drawBall() {
     p.a *= 0.82;
   }
 
-  ctx.fillStyle = '#fff';
+  drawSoccerBall(x, y, r, shot ? timeNow / 90 : 0);
+}
+
+// 本物っぽいサッカーボール(五角形パターン+立体感、rotで転がる)
+function drawSoccerBall(x, y, r, rot) {
+  ctx.save();
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.clip();
+  // 球体の陰影
+  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r * 1.1);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.7, '#eef0f2');
+  g.addColorStop(1, '#b3bac2');
+  ctx.fillStyle = g;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+
+  const pent = (px, py, pr, a) => {
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const th = a + (i * Math.PI * 2) / 5 - Math.PI / 2;
+      const vx = px + Math.cos(th) * pr;
+      const vy = py + Math.sin(th) * pr;
+      if (i === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+    }
+    ctx.closePath();
+  };
+
+  // 中央の黒五角形(回転で少し流れる)
+  const cxp = x + Math.cos(rot) * r * 0.16;
+  const cyp = y + Math.sin(rot * 0.7) * r * 0.1;
+  ctx.fillStyle = '#23272b';
+  pent(cxp, cyp, r * 0.3, rot * 0.6);
   ctx.fill();
-  ctx.fillStyle = '#222';
-  const spin = shot ? timeNow / 60 : 0;
-  ctx.beginPath();
-  ctx.arc(x + Math.cos(spin) * r * 0.4, y + Math.sin(spin) * r * 0.4, r * 0.28, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(x - Math.cos(spin + 1.8) * r * 0.45, y - Math.sin(spin + 1.8) * r * 0.45, r * 0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+
+  // 周囲の五角形(球の縁で見切れる)+縫い目
+  ctx.strokeStyle = 'rgba(35, 39, 43, 0.45)';
+  ctx.lineWidth = Math.max(1, r * 0.05);
+  for (let i = 0; i < 5; i++) {
+    const a = rot * 0.6 + (i * Math.PI * 2) / 5;
+    const px = cxp + Math.cos(a) * r * 0.88;
+    const py = cyp + Math.sin(a) * r * 0.88;
+    ctx.fillStyle = '#23272b';
+    pent(px, py, r * 0.26, a + 0.5);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cxp + Math.cos(a) * r * 0.3, cyp + Math.sin(a) * r * 0.3);
+    ctx.lineTo(px - Math.cos(a) * r * 0.24, py - Math.sin(a) * r * 0.24);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.stroke();
+}
+
+// 日本代表・背番号10のキッカー(背面ビュー)
+function drawKicker() {
+  if (state === STATE.TITLE) return;
+  const sz = L.goalH * 1.0;
+  const w = sz * 0.34;
+  const inAim = state === STATE.AIM_DIR || state === STATE.AIM_POWER || state === STATE.AIM_SIZE || state === STATE.INTRO;
+  const kicking = state === STATE.KICK || (state === STATE.SHOOT && shot && shot.t < 300);
+  const celebrating = state === STATE.GOAL;
+  const dejected = state === STATE.OVER || state === STATE.RETRY;
+
+  let kickP = 0;
+  if (state === STATE.KICK && kickAnim) kickP = Math.min((timeNow - kickAnim.startT) / 350, 1);
+  else if (state === STATE.SHOOT) kickP = 1;
+
+  let x = L.ballX - L.ballR * 2.6 + kickP * L.ballR * 1.2;
+  const baseY = L.ballY + L.ballR * 1.7;
+  const bob = inAim ? Math.sin(timeNow / 300) * sz * 0.015 : 0;
+
+  ctx.save();
+  ctx.translate(x, baseY + bob);
+  if (kicking) ctx.rotate(-0.08); // 前傾
+
+  // 軸足(左)
+  ctx.strokeStyle = '#ffcf9e';
+  ctx.lineWidth = w * 0.2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.16, -sz * 0.3);
+  ctx.lineTo(-w * 0.26, 0);
+  ctx.stroke();
+
+  // 蹴り足(右): 構え→振りかぶり→振り抜き
+  const swing = kicking ? -0.9 + kickP * 2.1 : 0.14;
+  const legLen = sz * 0.33;
+  const fx2 = w * 0.16 + Math.sin(swing) * legLen;
+  const fy2 = -sz * 0.3 + Math.cos(swing) * legLen;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.16, -sz * 0.3);
+  ctx.lineTo(fx2, fy2);
+  ctx.stroke();
+
+  // 靴下+シューズ
+  ctx.fillStyle = '#26221f';
+  ctx.beginPath();
+  ctx.arc(fx2, fy2, w * 0.15, 0, Math.PI * 2);
+  ctx.arc(-w * 0.26, 0, w * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  // パンツ(白)
+  ctx.fillStyle = '#f5f5f5';
+  ctx.beginPath();
+  ctx.roundRect(-w * 0.34, -sz * 0.42, w * 0.68, sz * 0.14, w * 0.08);
+  ctx.fill();
+
+  // ユニフォーム(サムライブルー)
+  ctx.fillStyle = '#1440a0';
+  ctx.beginPath();
+  ctx.roundRect(-w * 0.38, -sz * 0.7, w * 0.76, sz * 0.31, w * 0.12);
+  ctx.fill();
+
+  // 腕
+  ctx.strokeStyle = '#1440a0';
+  ctx.lineWidth = w * 0.17;
+  const aLen = w * 0.6;
+  let armAngle = 0.35; // 通常: やや開いて下げる
+  if (celebrating) armAngle = 2.2;   // バンザイ
+  else if (kicking) armAngle = 1.0;  // バランス取り
+  else if (dejected) armAngle = 0.1; // だらり
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * w * 0.32, -sz * 0.66);
+    ctx.lineTo(
+      s * (w * 0.32 + Math.cos(armAngle) * aLen),
+      -sz * 0.66 + (celebrating ? -Math.sin(armAngle - 1.2) * aLen : Math.sin(0.8 - armAngle * 0.4) * aLen)
+    );
+    ctx.stroke();
+  }
+
+  // 背番号10
+  ctx.fillStyle = '#fff';
+  ctx.font = `800 ${Math.round(sz * 0.15)}px 'M PLUS Rounded 1c', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('10', 0, -sz * 0.55);
+
+  // 頭(うなだれると下がる)+黒髪(背面)
+  const headY = dejected ? -sz * 0.76 : -sz * 0.82;
+  ctx.fillStyle = '#ffcf9e';
+  ctx.beginPath();
+  ctx.arc(0, headY, sz * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#1d1820';
+  ctx.beginPath();
+  ctx.arc(0, headY - sz * 0.012, sz * 0.1, Math.PI * 0.95, Math.PI * 2.05);
+  ctx.fill();
+
+  ctx.restore();
 }
 
 function drawArrow() {
@@ -1477,6 +1735,11 @@ function loop(t) {
   keeperPhase += (dt / (k ? k.swayPeriod : 2000)) * Math.PI * 2;
   keeperIdleX = L.cx + Math.sin(keeperPhase) * (k ? k.swayAmp : 0.3) * L.goalHalf;
 
+  // キックモーション → 発射
+  if (state === STATE.KICK && kickAnim && timeNow - kickAnim.startT >= 350) {
+    doShoot();
+  }
+
   // シュート進行
   if (shot && !shot.resolved) {
     shot.t += dt;
@@ -1509,6 +1772,7 @@ function loop(t) {
   drawKeeper();
   drawArrow();
   drawBall();
+  drawKicker();
   drawGauges();
   drawParticles();
   drawFlash();
