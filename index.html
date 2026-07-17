@@ -2,36 +2,97 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b1c33">
-  <title>PK対決!</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
-  <link rel="stylesheet" href="style.css">
+  <title>ゲームひろば</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      min-height: 100%;
+      background: linear-gradient(180deg, #0b1c33 0%, #14304f 60%, #1a3a5c 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+      color: #fff;
+      -webkit-tap-highlight-color: transparent;
+    }
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: calc(env(safe-area-inset-top, 0px) + 40px) 20px 60px;
+    }
+    h1 {
+      text-align: center;
+      font-size: clamp(32px, 10vw, 44px);
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .games {
+      display: grid;
+      gap: 16px;
+    }
+    .game-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 18px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .game-card:active {
+      transform: scale(0.97);
+      background: rgba(255, 255, 255, 0.13);
+    }
+    .game-icon {
+      font-size: 44px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .game-info h2 {
+      font-size: 19px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .game-info p {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.6;
+    }
+    .coming {
+      opacity: 0.45;
+      pointer-events: none;
+    }
+    .coming .game-info h2::after {
+      content: " (準備中)";
+      font-size: 12px;
+      color: #7fd4ff;
+    }
+  </style>
 </head>
 <body>
-  <canvas id="game"></canvas>
-
-  <div id="hud">
-    <div class="hud-item">連続ゴール <span id="score">0</span></div>
-    <div class="hud-item">ベスト <span id="best">0</span></div>
-  </div>
-
-  <div id="banner"></div>
-  <div id="hint">⚽ を上にスワイプしてシュート!</div>
-
-  <div id="start-overlay" class="overlay">
-    <h1>PK対決!</h1>
-    <p>スワイプでシュート!<br>キーパーをかわして連続ゴールを狙え。<br>速いスワイプほど強烈だが、コントロールが乱れるぞ。</p>
-    <div class="tap-label">タップでスタート</div>
-  </div>
-
-  <div id="over-overlay" class="overlay hidden">
-    <h2 id="over-reason">セーブされた!</h2>
-    <div class="over-score">連続ゴール <span id="over-score">0</span></div>
-    <div class="over-best">ベスト <span id="over-best">0</span></div>
-    <div class="tap-label">タップでリトライ</div>
-  </div>
-
-  <script src="game.js" defer></script>
+  <main>
+    <h1>🎮 ゲームひろば</h1>
+    <p class="subtitle">スマホでサクッと遊べるミニゲーム集</p>
+    <div class="games">
+      <a class="game-card" href="/pk/">
+        <span class="game-icon">⚽</span>
+        <span class="game-info">
+          <h2>PK対決!</h2>
+          <p>スワイプでシュート!キーパーをかわして連続ゴールを狙え。</p>
+        </span>
+      </a>
+      <!-- 新しいゲームはフォルダを作ってここにカードを追加 -->
+    </div>
+  </main>
 </body>
 </html>
