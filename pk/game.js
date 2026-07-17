@@ -910,6 +910,26 @@ nameInput.addEventListener('pointerdown', (e) => e.stopPropagation());
 overOverlay.addEventListener('click', () => { ensureAudio(); beginGame(); });
 introOverlay.addEventListener('click', () => { ensureAudio(); enterAim(); });
 showZukanBtn.addEventListener('click', (e) => { e.stopPropagation(); openZukan(); });
+document.getElementById('back-portal').addEventListener('click', (e) => e.stopPropagation());
+document.getElementById('back-title').addEventListener('click', (e) => {
+  e.stopPropagation();
+  goTitle();
+});
+
+function goTitle() {
+  state = STATE.TITLE;
+  stageIdx = startStage;
+  loopCount = 0;
+  hearts = 3;
+  shot = null;
+  plan = null;
+  keeperFX = null;
+  goalBroken = false;
+  overOverlay.classList.add('hidden');
+  introOverlay.classList.add('hidden');
+  updateHUD();
+  startOverlay.classList.remove('hidden');
+}
 zukanOverlay.addEventListener('click', (e) => {
   e.stopPropagation();
   zukanOverlay.classList.add('hidden');
