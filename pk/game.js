@@ -91,83 +91,92 @@ resize();
 const KEEPERS = [
   {
     name: '子犬のポチ', emoji: '🐶', country: 'ちびっこ幼稚園選抜', round: '壮行試合',
-    power: 0.04, swayAmp: 0.16, swayPeriod: 2800, diveSpeed: 0.00035, reactMs: 520, reach: 0.10, scale: 0.5,
+    power: 0.12, swayAmp: 0.16, swayPeriod: 2800, diveSpeed: 0.00035, reactMs: 520, reach: 0.10, scale: 0.5,
     intro: ['わん!', '(あそんでくれるの?)'],
     save: ['わん!!', '(ボールとれたよ!)'],
     hit: ['わふ?', '(いまのどこいった?)'],
     blown: ['きゃいーん!!', '(おそらとんでる〜)'],
+    mock: ['わんわん!', '(ボールどっかいっちゃった)'],
     draw: drawPochi,
   },
   {
     name: '小学生ケンタ', emoji: '🧢', country: '全国少年団選抜', round: '壮行試合',
-    power: 0.10, swayAmp: 0.24, swayPeriod: 2300, diveSpeed: 0.0006, reactMs: 420, reach: 0.14, scale: 0.7,
+    power: 0.22, swayAmp: 0.24, swayPeriod: 2300, diveSpeed: 0.0006, reactMs: 420, reach: 0.14, scale: 0.7,
     intro: ['ぜったい止めるもん!', '(母ちゃん見てて)'],
     save: ['やった〜!!', '(母ちゃん見た!?)'],
     hit: ['え、いま入った?', '(全然見えなかった…)'],
     blown: ['うわあああ!', '(母ちゃん、ぼく飛んでる!)'],
+    mock: ['ヘタクソ〜!', '(ぼくでも枠にはいくよ?)'],
     draw: drawKenta,
   },
   {
     name: 'ラーメン職人 麺蔵', emoji: '🍜', country: 'ヌードル帝国', round: 'アジア予選',
-    power: 0.18, swayAmp: 0.3, swayPeriod: 2000, diveSpeed: 0.0008, reactMs: 360, reach: 0.17, scale: 0.9,
+    power: 0.32, swayAmp: 0.3, swayPeriod: 2000, diveSpeed: 0.0008, reactMs: 360, reach: 0.17, scale: 0.9,
     intro: ['守りは麺の硬さと同じ', '(バリカタよ)'],
     save: ['ズズッ', '(いただきました)'],
     hit: ['隙ありか…', '(替え玉して出直す)'],
     blown: ['のびる〜〜!!', '(麺もワシも宙を舞う)'],
+    mock: ['麺より曲がっとる', '(修行が足りんな)'],
     draw: drawMenzo,
   },
   {
     name: 'キン・マッスル', emoji: '💪', country: 'マッチョ共和国', round: 'アジア最終予選',
-    power: 0.38, swayAmp: 0.26, swayPeriod: 1800, diveSpeed: 0.0009, reactMs: 330, reach: 0.20, scale: 1.05,
+    power: 0.48, swayAmp: 0.26, swayPeriod: 1800, diveSpeed: 0.0009, reactMs: 330, reach: 0.20, scale: 1.05,
     intro: ['筋肉は裏切らない', '(大胸筋で受け止める)'],
     save: ['ナイスマッスル!!', '(大胸筋キャッチ)'],
     hit: ['筋肉の死角…!', '(そこは盲点だった)'],
     blown: ['マッスルフライ!!', '(いい風だ…)'],
+    mock: ['筋肉に謝れ', '(枠は逃げないぞ)'],
     draw: drawMuscle,
   },
   {
     name: 'カベルマン', emoji: '🧱', country: 'ドイツ代表', round: 'グループリーグ',
-    power: 0.30, swayAmp: 0.18, swayPeriod: 1900, diveSpeed: 0.0007, reactMs: 300, reach: 0.30, scale: 1.0,
+    power: 0.42, swayAmp: 0.18, swayPeriod: 1900, diveSpeed: 0.0007, reactMs: 300, reach: 0.30, scale: 1.0,
     intro: ['私は壁だ', '(文字どおり)'],
     save: ['カチッ', '(壁に穴は無い)'],
     hit: ['壁に穴が…', '(リフォームが必要だ)'],
     blown: ['壁ごと!?', '(工事費を請求する)'],
+    mock: ['壁の出番すら無い', '(仕事をくれ)'],
     draw: drawKabelmann,
   },
   {
     name: 'ゴムゴム・ダ・シウバ', emoji: '🕺', country: 'ブラジル代表', round: 'グループリーグ',
-    power: 0.35, swayAmp: 0.42, swayPeriod: 1300, diveSpeed: 0.0013, reactMs: 280, reach: 0.26, scale: 1.0,
+    power: 0.46, swayAmp: 0.42, swayPeriod: 1300, diveSpeed: 0.0013, reactMs: 280, reach: 0.26, scale: 1.0,
     intro: ['リズムに乗りな', '(腕は伸びるぜ)'],
     save: ['ビヨーン', '(届いちゃうんだな)'],
     hit: ['ノーリズム!?', '(シンコペーションか…)'],
     blown: ['ビヨーーーン!!', '(伸びたまま飛んでる)'],
+    mock: ['枠外はノーカン', '(まずリズム練習からだ)'],
     draw: drawGomgom,
   },
   {
     name: 'エル・プルポ', emoji: '🐙', country: 'スペイン代表', round: '準々決勝',
-    power: 0.50, swayAmp: 0.3, swayPeriod: 1400, diveSpeed: 0.0014, reactMs: 250, reach: 0.30, scale: 1.05,
+    power: 0.58, swayAmp: 0.3, swayPeriod: 1400, diveSpeed: 0.0014, reactMs: 250, reach: 0.30, scale: 1.05,
     intro: ['腕は8本ある', '(どこに打つ気だ?)'],
     save: ['ぬるり', '(タコに死角なし)'],
     hit: ['8本でも届かん…', '(9本目が要る)'],
     blown: ['タコが宙を舞う!', '(茹でないで)'],
+    mock: ['墨も要らんかった', '(海より広い枠外)'],
     draw: drawPulpo,
   },
   {
     name: 'GK-9000', emoji: '🤖', country: 'AI連邦', round: '準決勝',
-    power: 0.62, swayAmp: 0.14, swayPeriod: 1000, diveSpeed: 0.0018, reactMs: 160, reach: 0.26, scale: 1.0,
+    power: 0.68, swayAmp: 0.14, swayPeriod: 1000, diveSpeed: 0.0018, reactMs: 160, reach: 0.26, scale: 1.0,
     intro: ['解析完了。', '(君のPK成功率: 2%)'],
     save: ['計算通り。', '(誤差0.00mm)'],
     hit: ['計算外…', '(再起動シマス…)'],
     blown: ['システムクラッシュ!!', '(空ヲ飛ンデイマス)'],
+    mock: ['命中率0%。', '(計算スルマデモナイ)'],
     draw: drawRobot,
   },
   {
     name: '魔王ゲルド', emoji: '👹', country: '魔王国ダークニル', round: '決勝',
-    power: 0.80, swayAmp: 0.34, swayPeriod: 1100, diveSpeed: 0.0019, reactMs: 150, reach: 0.32, scale: 1.15,
+    power: 0.82, swayAmp: 0.34, swayPeriod: 1100, diveSpeed: 0.0019, reactMs: 150, reach: 0.32, scale: 1.15,
     intro: ['よくぞここまで来た', '(だがここまでだ)'],
     save: ['フハハハ!', '(絶望を知れ)'],
     hit: ['バカな…!', '(コースが見えなかった)'],
     blown: ['魔王が飛ぶだと!?', '(城まで飛ばされた…)'],
+    mock: ['フハハ!', '(自滅とは楽でいい)'],
     draw: drawMaou,
   },
   {
@@ -177,6 +186,7 @@ const KEEPERS = [
     save: ['────。', '(それが人の限界か)'],
     hit: ['見事。', '(人よ、神になれ)'],
     blown: ['────!?', '(神が、飛ぶ…?)'],
+    mock: ['────。', '(枠は、あちらだ)'],
     draw: drawGod,
   },
 ];
@@ -208,8 +218,9 @@ let stageIdx = 0;
 let hearts = 3;
 let loopCount = 0;    // 周回数 (0 = 1周目)
 let loopMissed = false;
+// スコア形式変更のため新キー (旧pk_bestは旧形式なので引き継がない)
 let best = 0;
-try { best = parseInt(localStorage.getItem('pk_best') || '0', 10) || 0; } catch (e) {}
+try { best = parseInt(localStorage.getItem('pk_best2') || '0', 10) || 0; } catch (e) {}
 
 let phaseStart = 0;   // 現在のゲージフェーズ開始時刻
 let plan = null;      // { angle, speed, size } 選択途中の値
@@ -258,7 +269,7 @@ const ACHIEVEMENTS = [
   { medal: '🧨', name: '解体新書', desc: 'ゴールごと粉砕する', cond: () => stats.demolishes >= 1 },
   { medal: '💥', name: '破壊神', desc: 'ゴール粉砕を10回', cond: () => stats.demolishes >= 10 },
   { medal: '🌪', name: '台風の目', desc: 'キーパーを30回吹っ飛ばす', cond: () => stats.blows >= 30 },
-  { medal: '🌏', name: 'アジア突破', desc: '第5戦に到達する', cond: () => Math.floor(best / 10) >= 4 },
+  { medal: '🌏', name: 'アジア突破', desc: '第5戦に到達する', cond: () => best >= 4 },
   { medal: '🏆', name: '世界の頂', desc: '優勝する', cond: () => stats.clears >= 1 },
   { medal: '👑', name: 'パーフェクト', desc: 'ノーミスで優勝する', cond: () => stats.noMissClears >= 1 },
   { medal: '🎫', name: '常連', desc: '通算20回プレイする', cond: () => stats.plays >= 20 },
@@ -308,15 +319,14 @@ function openZukan() {
 }
 
 // ===== スコア =====
+// スコア = 倒したキーパーの総数 (ハートは含めない)
 function totalBeaten() { return loopCount * TOTAL + stageIdx; }
-function currentScore() { return Math.min(totalBeaten() * 10 + hearts, 999); }
+function currentScore() { return Math.min(totalBeaten(), 999); }
 function scoreLabel(s) {
-  const beaten = Math.floor(s / 10);
-  const hp = s % 10;
-  const loop = Math.floor(beaten / TOTAL);
-  const st = beaten % TOTAL;
+  const loop = Math.floor(s / TOTAL);
+  const st = s % TOTAL;
   const prefix = loop >= 1 ? `${loop + 1}周目 ` : '';
-  return `${prefix}第${st + 1}戦 ❤️${hp}`;
+  return `${prefix}第${st + 1}戦`;
 }
 function rankTitle(beaten) {
   if (beaten >= 30) return '生ける伝説';
@@ -799,7 +809,7 @@ function resolveShot() {
     updateHUD();
     fx.shake = 0.7;
     showBanner(o === 'save' ? 'SAVED!!' : 'WIDE!!', '#ff5a48');
-    if (o === 'save') speak(k.save, 2000);
+    speak(o === 'save' ? k.save : k.mock, 2000);
     playFail();
     vibrate(120);
     if (hearts > 0) {
@@ -825,7 +835,7 @@ function endGame() {
   const sc = currentScore();
   if (sc > best) {
     best = sc;
-    try { localStorage.setItem('pk_best', String(best)); } catch (e) {}
+    try { localStorage.setItem('pk_best2', String(best)); } catch (e) {}
   }
   setTimeout(() => {
     const k = K();
@@ -847,7 +857,7 @@ function endGame() {
 
 // 1体以上抜いていたら自動でランキングに送信。TOP10入りならバッジ+自動表示
 async function autoSubmitScore(score) {
-  if (score < 10 || !savedName) return;
+  if (score < 1 || !savedName) return;
   try {
     const r = await fetch(API, {
       method: 'POST',
