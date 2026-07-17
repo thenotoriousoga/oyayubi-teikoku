@@ -176,6 +176,101 @@ html, body {
   animation: tap-blink 1.2s ease-in-out infinite;
 }
 
+.rank-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px 24px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.rank-btn:active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+#rank-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+#rank-entry.hidden {
+  display: none;
+}
+
+#name-input {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 12px;
+  text-align: center;
+  width: 230px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+#submit-score {
+  background: #ffd94d;
+  border: none;
+  color: #333;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  padding: 12px 26px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+#submit-score:disabled {
+  opacity: 0.6;
+}
+
+#rank-overlay {
+  background: rgba(4, 12, 26, 0.94);
+}
+
+#rank-overlay .rank-title {
+  color: #ffd94d;
+}
+
+#rank-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+#rank-list li {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 16px;
+  text-align: left;
+}
+
+#rank-list li.me {
+  background: rgba(255, 217, 77, 0.22);
+  border-color: #ffd94d;
+}
+
+#rank-list li.rank-loading {
+  text-align: center;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.75);
+  background: none;
+}
+
 @keyframes tap-blink {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.35; }

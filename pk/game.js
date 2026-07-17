@@ -12,6 +12,13 @@ const overOverlay = document.getElementById('over-overlay');
 const overReasonEl = document.getElementById('over-reason');
 const overScoreEl = document.getElementById('over-score');
 const overBestEl = document.getElementById('over-best');
+const rankOverlay = document.getElementById('rank-overlay');
+const rankListEl = document.getElementById('rank-list');
+const rankEntryEl = document.getElementById('rank-entry');
+const nameInput = document.getElementById('name-input');
+const submitBtn = document.getElementById('submit-score');
+const showRankStartBtn = document.getElementById('show-rank-start');
+const showRankOverBtn = document.getElementById('show-rank-over');
 
 // ===== レイアウト =====
 let W = 0, H = 0, dpr = 1;
@@ -302,6 +309,10 @@ function resolveShot() {
       overReasonEl.textContent = reasons[o];
       overScoreEl.textContent = streak;
       overBestEl.textContent = best;
+      rankEntryEl.classList.toggle('hidden', streak < 1);
+      nameInput.value = savedName;
+      submitBtn.disabled = false;
+      submitBtn.textContent = '🏆 ランキングに登録';
       overOverlay.classList.remove('hidden');
     }, 900);
   }
@@ -333,6 +344,75 @@ window.addEventListener('contextmenu', (e) => e.preventDefault());
 
 startOverlay.addEventListener('click', () => { ensureAudio(); beginGame(); });
 overOverlay.addEventListener('click', () => { ensureAudio(); beginGame(); });
+
+// ===== オンラインランキング =====
+const API = '/api/scores';
+let savedName = '';
+try { savedName = localStorage.getItem('pk_name') || ''; } catch (e) {}
+
+function renderRanking(top, highlightName) {
+  rankListEl.innerHTML = '';
+  if (!top.length) {
+    const li = document.createElement('li');
+    li.className = 'rank-loading';
+    li.textContent = 'まだ記録がないよ。一番乗りを狙え!';
+    rankListEl.appendChild(li);
+    return;
+  }
+  top.forEach((entry, i) => {
+    const li = document.createElement('li');
+    const medal = ['🥇', '🥈', '🥉'][i] || ` ${i + 1}. `;
+    li.textContent = `${medal} ${entry.name} — ${entry.score}`;
+    if (highlightName && entry.name === highlightName) li.classList.add('me');
+    rankListEl.appendChild(li);
+  });
+}
+
+async function openRanking(highlightName) {
+  rankOverlay.classList.remove('hidden');
+  rankListEl.innerHTML = '<li class="rank-loading">読み込み中...</li>';
+  try {
+    const r = await fetch(API);
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    renderRanking(data.top || [], highlightName);
+  } catch (e) {
+    rankListEl.innerHTML = '<li class="rank-loading">ランキングを取得できませんでした</li>';
+  }
+}
+
+showRankStartBtn.addEventListener('click', (e) => { e.stopPropagation(); openRanking(savedName); });
+showRankOverBtn.addEventListener('click', (e) => { e.stopPropagation(); openRanking(savedName); });
+rankEntryEl.addEventListener('click', (e) => e.stopPropagation());
+rankOverlay.addEventListener('click', (e) => {
+  e.stopPropagation();
+  rankOverlay.classList.add('hidden');
+});
+
+submitBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  const name = nameInput.value.trim().slice(0, 10);
+  if (!name) { nameInput.focus(); return; }
+  savedName = name;
+  try { localStorage.setItem('pk_name', name); } catch (err) {}
+  submitBtn.disabled = true;
+  submitBtn.textContent = '送信中...';
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, score: streak }),
+    });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    submitBtn.textContent = '登録した!';
+    rankOverlay.classList.remove('hidden');
+    renderRanking(data.top || [], name);
+  } catch (err) {
+    submitBtn.textContent = 'エラー… もう一度';
+    submitBtn.disabled = false;
+  }
+});
 
 // ===== 描画 =====
 function drawBackground() {

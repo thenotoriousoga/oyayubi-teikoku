@@ -22,6 +22,7 @@
   <div id="start-overlay" class="overlay">
     <h1>PK対決!</h1>
     <p>スワイプでシュート!<br>キーパーをかわして連続ゴールを狙え。<br>速いスワイプほど強烈だが、コントロールが乱れるぞ。</p>
+    <button id="show-rank-start" class="rank-btn">🏆 ランキング</button>
     <div class="tap-label">タップでスタート</div>
   </div>
 
@@ -29,7 +30,18 @@
     <h2 id="over-reason">セーブされた!</h2>
     <div class="over-score">連続ゴール <span id="over-score">0</span></div>
     <div class="over-best">ベスト <span id="over-best">0</span></div>
+    <div id="rank-entry" class="hidden">
+      <input id="name-input" maxlength="10" placeholder="なまえ (10文字まで)" autocomplete="off">
+      <button id="submit-score">🏆 ランキングに登録</button>
+    </div>
+    <button id="show-rank-over" class="rank-btn">ランキングを見る</button>
     <div class="tap-label">タップでリトライ</div>
+  </div>
+
+  <div id="rank-overlay" class="overlay hidden">
+    <h2 class="rank-title">🏆 ランキング TOP10</h2>
+    <ol id="rank-list"></ol>
+    <div class="tap-label">タップで閉じる</div>
   </div>
 
   <script src="game.js" defer></script>
