@@ -25,6 +25,7 @@ const overTapEl = document.getElementById('over-tap');
 const rankOverlay = document.getElementById('rank-overlay');
 const rankListEl = document.getElementById('rank-list');
 const nameInput = document.getElementById('name-input');
+const numberInput = document.getElementById('number-input');
 const startTapEl = document.getElementById('start-tap');
 const top10Badge = document.getElementById('top10-badge');
 const showRankStartBtn = document.getElementById('show-rank-start');
@@ -844,7 +845,7 @@ function nextStage() {
     saveMeta();
     loopCount++;
     stageIdx = 0;
-    hearts = 3;
+    // ハートは回復しない (1ランを通して3ミスまで)
     loopMissed = false;
     setTimeout(() => {
       showBanner('WORLD CHAMPION!!', '#f2b90c');
@@ -1026,11 +1027,19 @@ startOverlay.addEventListener('click', () => {
     return;
   }
   savedName = name;
-  try { localStorage.setItem('pk_name', name); } catch (e) {}
+  const num = parseInt(numberInput.value, 10);
+  playerNumber = num >= 1 && num <= 99 ? num : 10;
+  numberInput.value = String(playerNumber);
+  try {
+    localStorage.setItem('pk_name', name);
+    localStorage.setItem('pk_number', String(playerNumber));
+  } catch (e) {}
   beginGame();
 });
 nameInput.addEventListener('click', (e) => e.stopPropagation());
 nameInput.addEventListener('pointerdown', (e) => e.stopPropagation());
+numberInput.addEventListener('click', (e) => e.stopPropagation());
+numberInput.addEventListener('pointerdown', (e) => e.stopPropagation());
 overOverlay.addEventListener('click', () => { ensureAudio(); beginGame(); });
 introOverlay.addEventListener('click', () => { ensureAudio(); enterAim(); });
 showZukanBtn.addEventListener('click', (e) => { e.stopPropagation(); openZukan(); });
@@ -1062,8 +1071,13 @@ zukanOverlay.addEventListener('click', (e) => {
 // ===== オンラインランキング =====
 const API = '/api/scores';
 let savedName = '';
-try { savedName = localStorage.getItem('pk_name') || ''; } catch (e) {}
+let playerNumber = 10;
+try {
+  savedName = localStorage.getItem('pk_name') || '';
+  playerNumber = parseInt(localStorage.getItem('pk_number') || '10', 10) || 10;
+} catch (e) {}
 nameInput.value = savedName;
+numberInput.value = String(playerNumber);
 
 function renderRanking(top, highlightName) {
   rankListEl.innerHTML = '';
@@ -1877,7 +1891,7 @@ function drawKicker() {
   ctx.font = `800 ${Math.round(sz * 0.15)}px 'M PLUS Rounded 1c', sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('10', 0, -sz * 0.55);
+  ctx.fillText(String(playerNumber), 0, -sz * 0.55);
 
   // 頭(うなだれると下がる)+黒髪(背面)
   const headY = dejected ? -sz * 0.76 : -sz * 0.82;
