@@ -208,6 +208,102 @@ const PROFILES = [
   'ゴールという概念そのもの。抜いた者は神になるという。',
 ];
 
+// ===== 覚醒キーパー(2周目以降の上書き。KEEPERSと同順) =====
+// パラメータは各キャラの個性を1つ尖らせる小幅強化に留める。
+// power は 0.88 以下を保つ(全力シュートで必ず吹っ飛ばせる余地を残す)
+const AWAKENED = [
+  {
+    name: '成犬ポチ', emoji: '🐕',
+    scale: 0.8, diveSpeed: 0.0005, reactMs: 460, reach: 0.13,
+    intro: ['わんっ!!', '(おおきくなったよ!)'],
+    save: ['わんわん!!', '(「まて」のあとのキャッチ!)'],
+    hit: ['くぅん…', '(もっとおおきくなるもん)'],
+    blown: ['きゃいーん!!', '(このそら、しってる〜)'],
+    mock: ['わん?', '(ボールまたおさんぽいった)'],
+  },
+  {
+    name: '中学生ケンタ',
+    scale: 0.85, diveSpeed: 0.0007, reactMs: 370,
+    intro: ['声変わりした俺は違うぞ', '(母ちゃんは今日も撮影中)'],
+    save: ['成長期なめんな!', '(リーチ伸びたんだよ)'],
+    hit: ['くっそ〜!', '(高校で待ってろよ)'],
+    blown: ['うわあああ!', '(母ちゃんこの動画消して!)'],
+    mock: ['先輩、枠あっちすよ', '(反抗期なんで言います)'],
+  },
+  {
+    name: '麺蔵・極',
+    swayPeriod: 1700, reach: 0.19,
+    intro: ['新メニューができた', '(その名も「鉄壁豚骨」)'],
+    save: ['スープ完成', '(隠し味はお前の涙よ)'],
+    hit: ['まだ麺が柔い…', '(粉から出直しじゃ)'],
+    blown: ['替え玉じゃあ!!', '(ワシごとお替わりされた)'],
+    mock: ['それじゃ湯切りもできん', '(手首から鍛え直せ)'],
+  },
+  {
+    name: 'キン・マッスルMAX',
+    power: 0.55, scale: 1.15, reach: 0.23,
+    intro: ['超回復、完了だ', '(パンプアップは裏切らない)'],
+    save: ['ナイスバルク!!', '(僧帽筋で受け止めた)'],
+    hit: ['オーバーワークか…', '(休養も筋トレのうち)'],
+    blown: ['マッスルロケット!!', '(大空も、筋肉だ)'],
+    mock: ['筋肉に二度謝れ', '(枠も泣いてるぞ)'],
+  },
+  {
+    name: '大城壁カベルマン',
+    scale: 1.12, reach: 0.33, diveSpeed: 0.00065,
+    intro: ['増築した', '(今の私は城である)'],
+    save: ['ガチン', '(城門は開かない)'],
+    hit: ['城壁に亀裂が…', '(補修工事を要請する)'],
+    blown: ['落城!?', '(歴史的陥落である)'],
+    mock: ['攻城の前に地図を見ろ', '(門はこっちだ)'],
+  },
+  {
+    name: 'カーニバル・ダ・シウバ',
+    swayAmp: 0.5, swayPeriod: 1000,
+    intro: ['カーニバル開幕だ', '(今日の腕はもっと伸びる)'],
+    save: ['ビヨヨーン', '(リオまで届くぜ)'],
+    hit: ['ウソだろ!?', '(裏の裏の裏拍か…)'],
+    blown: ['ビヨーーーン!!', '(祭りごと飛んでいく〜)'],
+    mock: ['サンバは足元からだ', '(枠はあっちだぜ)'],
+  },
+  {
+    name: '深海王プルポ', emoji: '🦑',
+    reactMs: 220, reach: 0.32,
+    intro: ['深海より浮上した', '(今日は10本ある気分だ)'],
+    save: ['ぬちゃり', '(深海の水圧を知れ)'],
+    hit: ['10本でも届かん…', '(まだ進化が足りん)'],
+    blown: ['イカになっちまう!!', '(茹だって宙を舞う)'],
+    mock: ['墨を吐く価値もない', '(海流から読み直せ)'],
+  },
+  {
+    name: 'GK-9001',
+    reactMs: 140, diveSpeed: 0.0019,
+    intro: ['アップデート完了。', '(君ノ敗北ヲ予約シマシタ)'],
+    save: ['計算通り。ver.2.0', '(誤差0.000mm)'],
+    hit: ['未知ノ入力…', '(学習データニ追加シマス)'],
+    blown: ['例外発生!!', '(空中デ再起動中…)'],
+    mock: ['命中率、依然0%。', '(修正スル要素ガ無イ)'],
+  },
+  {
+    name: '真魔王ゲルド',
+    power: 0.88, scale: 1.22, reactMs: 145,
+    intro: ['二度目の勇者よ', '(真の姿を見せてやろう)'],
+    save: ['フハハハハ!', '(二周目の絶望はどうだ)'],
+    hit: ['この形態でもか…!', '(言っておくが第三形態は無い)'],
+    blown: ['真魔王が飛ぶだと!?', '(魔王城を建て直しておけ…)'],
+    mock: ['勇者(自称)よ', '(魔王城は枠の中だぞ)'],
+  },
+  {
+    name: '創世のゴール神',
+    swayPeriod: 1050, reach: 0.31,
+    intro: ['また来たか、人の子', '(二度目の奇跡は無い)'],
+    save: ['────。', '(宇宙は揺るがぬ)'],
+    hit: ['……見事。', '(二度目の神殺し、か)'],
+    blown: ['────!?', '(新たな神話が生まれた)'],
+    mock: ['────。', '(枠の概念から教えようか)'],
+  },
+];
+
 // ===== 状態 =====
 const STATE = {
   TITLE: 'title', INTRO: 'intro',
@@ -233,28 +329,39 @@ let timeNow = 0;
 let fx = { netShake: 0, flash: 0, shake: 0, trail: [] };
 let particles = [];
 
-// デバッグ: ?stage=N で任意ステージ開始
+// デバッグ: ?stage=N で任意ステージ開始、?loop=N でN周目(覚醒)開始
 let startStage = 0;
+let startLoop = 0;
 {
-  const q = parseInt(new URLSearchParams(location.search).get('stage'), 10);
+  const params = new URLSearchParams(location.search);
+  const q = parseInt(params.get('stage'), 10);
   if (q >= 1 && q <= TOTAL) startStage = q - 1;
+  const ql = parseInt(params.get('loop'), 10);
+  if (ql >= 2) startLoop = ql - 1;
 }
 
 // キーパーのスウェー
 let keeperPhase = Math.random() * Math.PI * 2;
 let keeperIdleX = 0;
 
-function K() { return KEEPERS[Math.min(stageIdx, TOTAL - 1)]; }
+// 2周目以降は覚醒版(AWAKENEDの上書きをマージしたもの)を返す
+const awakenedKeepers = [];
+function K() {
+  const i = Math.min(stageIdx, TOTAL - 1);
+  if (loopCount === 0) return KEEPERS[i];
+  if (!awakenedKeepers[i]) awakenedKeepers[i] = { ...KEEPERS[i], ...AWAKENED[i], awakened: true };
+  return awakenedKeepers[i];
+}
 
-// 周回による難化はキーパー強化ではなく「ゲージの速さ」で表現する。
-// 上限1.8倍キャップで、人間に決められない速さには決してならない
+// 周回による難化は「ゲージの速さ」+「キーパーの覚醒(小幅強化)」で表現する。
+// ゲージは上限1.8倍キャップで、人間に決められない速さには決してならない
 function gaugeSpeedup() {
   return Math.min(1 + loopCount * 0.15, 1.8);
 }
 
 // ===== 図鑑・実績(localStorage) =====
 let zukan = new Set();
-let stats = { plays: 0, goals: 0, blows: 0, demolishes: 0, clears: 0, noMissClears: 0, wides: 0, panenkas: 0 };
+let stats = { plays: 0, goals: 0, blows: 0, demolishes: 0, clears: 0, noMissClears: 0, wides: 0, awakenedKills: 0 };
 try { zukan = new Set(JSON.parse(localStorage.getItem('pk_zukan') || '[]')); } catch (e) {}
 try { Object.assign(stats, JSON.parse(localStorage.getItem('pk_stats') || '{}')); } catch (e) {}
 
@@ -295,7 +402,7 @@ const ACHIEVEMENTS = [
   { medal: '💥', name: '破壊神', desc: 'ゴール粉砕を10回', cond: () => stats.demolishes >= 10, reward: { type: 'ball', id: 'flame' } },
   { medal: '🌪', name: '台風の目', desc: 'キーパーを30回吹っ飛ばす', cond: () => stats.blows >= 30 },
   { medal: '🌏', name: 'アジア突破', desc: '第5戦に到達する', cond: () => best >= 4, reward: { type: 'ball', id: 'sakura' } },
-  { medal: '🎯', name: 'パネンカ', desc: 'ど真ん中への軽いシュートでゴール', cond: () => stats.panenkas >= 1 },
+  { medal: '⚡', name: '覚醒討伐', desc: '覚醒したキーパーを倒す', cond: () => stats.awakenedKills >= 1 },
   { medal: '🚀', name: '宇宙開発', desc: '枠外に通算10回ふっとばす', cond: () => stats.wides >= 10, reward: { type: 'uniform', id: 'neon' } },
   { medal: '🥅', name: 'ゴールハンター', desc: '通算50ゴール', cond: () => stats.goals >= 50, reward: { type: 'uniform', id: 'crimson' } },
   { medal: '🤖', name: 'ゴールマシン', desc: '通算200ゴール', cond: () => stats.goals >= 200 },
@@ -465,15 +572,47 @@ function ensureAudio() {
   if (AC && AC.state === 'suspended') AC.resume();
 }
 
-function thump(freq, when, gain, dur) {
+// --- 音源プリミティブ ---
+// オシレータ1本 + 減衰エンベロープ。slideTo でピッチ変化、attack で立ち上がり
+function tone(t, { type = 'sine', freq, slideTo = null, slideDur = null, attack = 0, vol, dur }) {
+  if (!AC) return;
   const o = AC.createOscillator(), g = AC.createGain();
-  o.type = 'sine';
-  o.frequency.setValueAtTime(freq, when);
-  o.frequency.exponentialRampToValueAtTime(Math.max(30, freq * 0.55), when + dur);
-  g.gain.setValueAtTime(gain, when);
-  g.gain.exponentialRampToValueAtTime(0.001, when + dur);
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if (slideTo != null) o.frequency.exponentialRampToValueAtTime(slideTo, t + (slideDur ?? dur));
+  if (attack > 0) {
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+  } else {
+    g.gain.setValueAtTime(vol, t);
+  }
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(g).connect(AC.destination);
-  o.start(when); o.stop(when + dur + 0.02);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+
+// ノイズ + フィルタ + 減衰エンベロープ。slideTo でフィルタ周波数変化
+function noiseHit(t, { filter, freq, slideTo = null, Q = 1, attack = 0, vol, dur }) {
+  if (!AC) return;
+  const n = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
+  n.buffer = noiseBuf;
+  f.type = filter;
+  f.frequency.setValueAtTime(freq, t);
+  if (slideTo != null) f.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  f.Q.value = Q;
+  if (attack > 0) {
+    g.gain.setValueAtTime(0.001, t);
+    g.gain.linearRampToValueAtTime(vol, t + attack);
+  } else {
+    g.gain.setValueAtTime(vol, t);
+  }
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  n.connect(f).connect(g).connect(AC.destination);
+  n.start(t); n.stop(t + dur + 0.02);
+}
+
+function thump(freq, when, gain, dur) {
+  tone(when, { freq, slideTo: Math.max(30, freq * 0.55), vol: gain, dur });
 }
 
 let lastBeat = 0;
@@ -488,266 +627,127 @@ function heartbeat() {
 
 // ===== HipHopビート(オリジナル打ち込み・狙い中に薄く流す) =====
 function drumKick(t) {
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = 'sine';
-  o.frequency.setValueAtTime(110, t);
-  o.frequency.exponentialRampToValueAtTime(42, t + 0.11);
-  g.gain.setValueAtTime(0.30, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-  o.connect(g).connect(AC.destination);
-  o.start(t); o.stop(t + 0.16);
+  tone(t, { freq: 110, slideTo: 42, slideDur: 0.11, vol: 0.30, dur: 0.14 });
 }
 
 function drumSnare(t) {
-  const n = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
-  n.buffer = noiseBuf;
-  f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.8;
-  g.gain.setValueAtTime(0.14, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-  n.connect(f).connect(g).connect(AC.destination);
-  n.start(t); n.stop(t + 0.1);
+  noiseHit(t, { filter: 'bandpass', freq: 1900, Q: 0.8, vol: 0.14, dur: 0.09 });
 }
 
 function drumHat(t, open) {
-  const n = AC.createBufferSource(), g = AC.createGain(), f = AC.createBiquadFilter();
-  n.buffer = noiseBuf;
-  f.type = 'highpass'; f.frequency.value = 7500;
-  g.gain.setValueAtTime(open ? 0.05 : 0.035, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.08 : 0.03));
-  n.connect(f).connect(g).connect(AC.destination);
-  n.start(t); n.stop(t + 0.1);
+  noiseHit(t, { filter: 'highpass', freq: 7500, vol: open ? 0.05 : 0.035, dur: open ? 0.08 : 0.03 });
 }
 
-// 80BPM・8分音符ステップ。ブーンバップの基本形
+function playPiano(freq, t, vol = 0.04) {
+  tone(t, { type: 'triangle', freq, attack: 0.15, vol, dur: 1.2 });
+}
+
+function play808(freq, t, vol = 0.25) {
+  tone(t, { freq: freq * 1.5, slideTo: freq, slideDur: 0.08, vol, dur: 0.8 });
+}
+
+// 基音 + 非整数次倍音(×3.51)でベルらしい響きにする
+function playBell(freq, t, vol = 0.01) {
+  tone(t, { freq, vol, dur: 0.6 });
+  tone(t, { freq: freq * 3.51, vol, dur: 0.6 });
+}
+
+// ブレイク直前の風切り上昇音
+function playRiser(t, dur, vol = 0.04) {
+  noiseHit(t, { filter: 'lowpass', freq: 300, slideTo: 8000, attack: dur * 0.8, vol, dur });
+}
+
+// スネア直前の装填音「チャカッ」
+function playChant(t, vol = 0.03) {
+  tone(t, { type: 'triangle', freq: 1500, slideTo: 100, vol, dur: 0.04 });
+}
+
+// フレーズ4小節目のアクセント
+function playLaser(freq, t, vol = 0.015) {
+  tone(t, { type: 'sawtooth', freq: freq * 3, slideTo: freq / 2, vol, dur: 0.15 });
+}
+
+// --- シーケンサー ---
+// 80BPM・16分音符刻み。16ステップ=1小節、8小節で1フレーズをループ。
+// フレーズ末(8小節目の後半4ステップ)はドラムを抜くブレイク、直前にライザーで煽る
+const BEAT_STEP = 60 / 80 / 4; // ≒0.19s
 let beatNextT = 0;
 let beatStep = 0;
-const BEAT_8TH = 60 / 80 / 2; // ≒0.34s
 
-// =================================================================
-// 🎹 1. 追加のトラップ音源・FX関数
-// =================================================================
-
-function playPiano(freq, time, vol = 0.04) {
-  if (!AC) return;
-  const osc = AC.createOscillator();
-  const gain = AC.createGain();
-  osc.type = 'triangle'; 
-  osc.frequency.setValueAtTime(freq, time);
-  gain.gain.setValueAtTime(0.001, time);
-  gain.gain.linearRampToValueAtTime(vol, time + 0.15); 
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 1.2); 
-  osc.connect(gain);
-  gain.connect(AC.destination);
-  osc.start(time);
-  osc.stop(time + 1.2);
-}
-
-function play808(freq, time, vol = 0.25) {
-  if (!AC) return;
-  const osc = AC.createOscillator();
-  const gain = AC.createGain();
-  osc.type = 'sine'; 
-  osc.frequency.setValueAtTime(freq * 1.5, time);
-  osc.frequency.exponentialRampToValueAtTime(freq, time + 0.08);
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.8); 
-  osc.connect(gain);
-  gain.connect(AC.destination);
-  osc.start(time);
-  osc.stop(time + 0.8);
-}
-
-function playBell(freq, time, vol = 0.01) { 
-  if (!AC) return;
-  const osc = AC.createOscillator();
-  const overTone = AC.createOscillator(); 
-  const gain = AC.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(freq, time);
-  overTone.type = 'sine';
-  overTone.frequency.setValueAtTime(freq * 3.51, time); 
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.6); 
-  osc.connect(gain);
-  overTone.connect(gain); 
-  gain.connect(AC.destination);
-  osc.start(time);
-  overTone.start(time);
-  osc.stop(time + 0.6);
-  overTone.stop(time + 0.6);
-}
-
-// 【新機能】ライザー（ブレイク直前の風切音）
-function playRiser(time, duration = 0.4, vol = 0.04) {
-  if (!AC) return;
-  const bufferSize = AC.sampleRate * duration;
-  const buffer = AC.createBuffer(1, bufferSize, AC.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
-  const noise = AC.createBufferSource();
-  noise.buffer = buffer;
-  const filter = AC.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(300, time);
-  filter.frequency.exponentialRampToValueAtTime(8000, time + duration);
-  const gain = AC.createGain();
-  gain.gain.setValueAtTime(0.001, time);
-  gain.gain.linearRampToValueAtTime(vol, time + duration * 0.8);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-  noise.connect(filter); filter.connect(gain); gain.connect(AC.destination);
-  noise.start(time);
-}
-
-// 【新機能】チャカッ（スネア直前の装填音）
-function playChant(time, vol = 0.03) {
-  if (!AC) return;
-  const osc = AC.createOscillator();
-  const gain = AC.createGain();
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(1500, time);
-  osc.frequency.exponentialRampToValueAtTime(100, time + 0.04);
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
-  osc.connect(gain); gain.connect(AC.destination);
-  osc.start(time); osc.stop(time + 0.04);
-}
-
-// 【新機能】レーザー音（4小節目のアクセント）
-function playLaser(freq, time, vol = 0.015) {
-  if (!AC) return;
-  const osc = AC.createOscillator();
-  const gain = AC.createGain();
-  osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(freq * 3, time);
-  osc.frequency.exponentialRampToValueAtTime(freq / 2, time + 0.15);
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
-  osc.connect(gain); gain.connect(AC.destination);
-  osc.start(time); osc.stop(time + 0.15);
-}
-
-// =================================================================
-// 🥁 2. メインのシーケンサー関数
-// =================================================================
+// コード進行 Am → F(小節の前半/後半で切替)
+const PIANO_STEPS = {
+  0: [220.00, 261.63, 329.63], // Am
+  8: [174.61, 261.63, 349.23], // F
+};
+const BELL_STEPS = { 4: 880.00, 12: 1046.50 };
+// キックの位置と重ねる808ベースの音程(null はキックのみ)
+const KICK_STEPS = { 0: 55.00, 3: 48.99, 4: null, 11: 58.27 };
 
 function scheduleBeat() {
   if (!AC) return;
   const now = AC.currentTime;
-  if (beatNextT < now - 0.5) { beatNextT = now + 0.05; }
-
-  const stepTime = BEAT_8TH / 2; 
-
+  if (beatNextT < now - 0.5) beatNextT = now + 0.05; // 中断明けは現在時刻から再開
   while (beatNextT < now + 0.35) {
-    const s = beatStep % 16; 
-    const measure = Math.floor(beatStep / 16);
-    const is8thMeasureEnd = (measure % 8 === 7 && s >= 12);
-
-    // --- FX: 4小節目（インデックス3）の頭にレーザーを隠し味で入れる ---
-    if (measure % 8 === 3 && s === 0) {
-      playLaser(600.00, beatNextT);
-    }
-
-    // --- FX: 8小節目のステップ8（スネアの位置）から、ステップ12のブレイクに向けてライザー始動！ ---
-    if (measure % 8 === 7 && s === 8) {
-      playRiser(beatNextT, stepTime * 4, 0.04); // 4ステップ分（約0.5秒）かけて上昇
-    }
-
-    // --- FX: スネアの直前（ステップ7）の裏拍（stepTime / 2）に「チャカッ」を仕込む ---
-    if (s === 7 && !is8thMeasureEnd) {
-      playChant(beatNextT + stepTime / 2);
-    }
-
-    // --- A. ピアノ（常時演奏） ---
-    if (s === 0) {
-      playPiano(220.00, beatNextT, 0.04); // Am
-      playPiano(261.63, beatNextT, 0.04); 
-      playPiano(329.63, beatNextT, 0.04); 
-    } else if (s === 8) {
-      playPiano(174.61, beatNextT, 0.04); // F
-      playPiano(261.63, beatNextT, 0.04); 
-      playPiano(349.23, beatNextT, 0.04); 
-    }
-
-    // --- B. シンセベル（常時演奏） ---
-    if (s === 4)  playBell(880.00, beatNextT, 0.01);  
-    if (s === 12) playBell(1046.50, beatNextT, 0.01); 
-    
-    // --- C. キック ＆ 808重低音ベース（8小節末はカット） ---
-    if (s === 0) {
-      drumKick(beatNextT);
-      play808(55.00, beatNextT, 0.25); 
-    } 
-    else if (s === 3) {
-      drumKick(beatNextT);
-      play808(48.99, beatNextT, 0.25); 
-    }
-    else if (s === 4) {
-      drumKick(beatNextT); 
-    }
-    else if (s === 11 && !is8thMeasureEnd) {
-      drumKick(beatNextT);
-      play808(58.27, beatNextT, 0.25); 
-    }
-    
-    // --- D. スネア（8小節末はカット） ---
-    if (s === 8) {
-      drumSnare(beatNextT);
-    } 
-    else if (s === 15 && Math.random() < 0.4 && !is8thMeasureEnd) {
-      drumSnare(beatNextT); 
-    }
-    
-    // --- E. ハイハット（8小節末はカット） ---
-    if (s === 6 || s === 14) {
-      if (!is8thMeasureEnd) {
-        drumHat(beatNextT);
-        drumHat(beatNextT + stepTime / 2); 
-      }
-    } else if (s === 11) {
-      const triplet = stepTime / 3;
-      drumHat(beatNextT);
-      drumHat(beatNextT + triplet);
-      drumHat(beatNextT + triplet * 2);
-    } else {
-      if (!is8thMeasureEnd) {
-        const isOpen = (s === 7 || s === 15);
-        drumHat(beatNextT, isOpen);
-      }
-    }
-    
-    beatNextT += stepTime;
+    playBeatStep(beatStep, beatNextT);
+    beatNextT += BEAT_STEP;
     beatStep++;
   }
 }
 
+function playBeatStep(step, t) {
+  const s = step % 16;
+  const measure = Math.floor(step / 16) % 8;
+  const isBreak = measure === 7 && s >= 12;
+
+  // FX: 4小節目頭のレーザー / ブレイクへ向かうライザー / スネア直前のチャカッ
+  if (measure === 3 && s === 0) playLaser(600, t);
+  if (measure === 7 && s === 8) playRiser(t, BEAT_STEP * 4);
+  if (s === 7) playChant(t + BEAT_STEP / 2);
+
+  // ピアノ(コード)とシンセベル
+  if (PIANO_STEPS[s]) PIANO_STEPS[s].forEach((f) => playPiano(f, t));
+  if (BELL_STEPS[s]) playBell(BELL_STEPS[s], t);
+
+  // キック & 808ベース
+  if (s in KICK_STEPS) {
+    drumKick(t);
+    if (KICK_STEPS[s]) play808(KICK_STEPS[s], t);
+  }
+
+  // スネア(s=8 が表、s=15 は確率で入るゴースト)
+  if (s === 8) drumSnare(t);
+  if (s === 15 && !isBreak && Math.random() < 0.4) drumSnare(t);
+
+  // ハイハット(ブレイク中は全カット)
+  if (isBreak) return;
+  if (s === 6 || s === 14) {
+    drumHat(t);
+    drumHat(t + BEAT_STEP / 2);
+  } else if (s === 11) {
+    const tri = BEAT_STEP / 3;
+    drumHat(t); drumHat(t + tri); drumHat(t + tri * 2);
+  } else {
+    drumHat(t, s === 7 || s === 15);
+  }
+}
+
+// ===== 効果音 =====
 function playTap() {
   if (!AC) return;
-  const t = AC.currentTime;
-  const o = AC.createOscillator(), g = AC.createGain();
-  o.type = 'square';
-  o.frequency.value = 880;
-  g.gain.setValueAtTime(0.08, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-  o.connect(g).connect(AC.destination);
-  o.start(t); o.stop(t + 0.07);
+  tone(AC.currentTime, { type: 'square', freq: 880, vol: 0.08, dur: 0.06 });
 }
 
 function playKick(power) {
   if (!AC) return;
   const t = AC.currentTime;
   thump(150 + power * 80, t, 0.4 + power * 0.3, 0.15);
-  const n = AC.createBufferSource(), ng = AC.createGain(), nf = AC.createBiquadFilter();
-  n.buffer = noiseBuf;
-  nf.type = 'lowpass'; nf.frequency.value = 900;
-  ng.gain.setValueAtTime(0.25, t);
-  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-  n.connect(nf).connect(ng).connect(AC.destination);
-  n.start(t); n.stop(t + 0.1);
+  noiseHit(t, { filter: 'lowpass', freq: 900, vol: 0.25, dur: 0.08 });
 }
 
 function playGoal() {
   if (!AC) return;
   const t = AC.currentTime;
+  // 歓声風スウェル(立ち上がりも指数カーブなので noiseHit は使わない)
   const n = AC.createBufferSource(), ng = AC.createGain(), nf = AC.createBiquadFilter();
   n.buffer = noiseBuf; n.loop = true;
   nf.type = 'bandpass'; nf.frequency.value = 1100; nf.Q.value = 0.6;
@@ -756,14 +756,9 @@ function playGoal() {
   ng.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
   n.connect(nf).connect(ng).connect(AC.destination);
   n.start(t); n.stop(t + 1);
+  // ファンファーレ C-E-G
   [523.25, 659.25, 783.99].forEach((f, i) => {
-    const o = AC.createOscillator(), g = AC.createGain();
-    o.type = 'triangle'; o.frequency.value = f;
-    const ts = t + 0.05 + i * 0.09;
-    g.gain.setValueAtTime(0.22, ts);
-    g.gain.exponentialRampToValueAtTime(0.001, ts + 0.35);
-    o.connect(g).connect(AC.destination);
-    o.start(ts); o.stop(ts + 0.4);
+    tone(t + 0.05 + i * 0.09, { type: 'triangle', freq: f, vol: 0.22, dur: 0.35 });
   });
 }
 
@@ -771,28 +766,14 @@ function playBlow(big) {
   if (!AC) return;
   const t = AC.currentTime;
   thump(big ? 55 : 75, t, 0.55, big ? 0.4 : 0.25);
-  const n = AC.createBufferSource(), ng = AC.createGain(), nf = AC.createBiquadFilter();
-  n.buffer = noiseBuf;
-  nf.type = 'lowpass'; nf.frequency.value = big ? 500 : 1200;
-  ng.gain.setValueAtTime(big ? 0.5 : 0.3, t);
-  ng.gain.exponentialRampToValueAtTime(0.001, t + (big ? 0.6 : 0.3));
-  n.connect(nf).connect(ng).connect(AC.destination);
-  n.start(t); n.stop(t + 0.7);
+  noiseHit(t, { filter: 'lowpass', freq: big ? 500 : 1200, vol: big ? 0.5 : 0.3, dur: big ? 0.6 : 0.3 });
 }
 
 function playFail() {
   if (!AC) return;
   const t = AC.currentTime;
   [280, 200].forEach((f, i) => {
-    const o = AC.createOscillator(), g = AC.createGain();
-    o.type = 'square';
-    const ts = t + i * 0.18;
-    o.frequency.setValueAtTime(f, ts);
-    o.frequency.exponentialRampToValueAtTime(f * 0.85, ts + 0.15);
-    g.gain.setValueAtTime(0.12, ts);
-    g.gain.exponentialRampToValueAtTime(0.001, ts + 0.17);
-    o.connect(g).connect(AC.destination);
-    o.start(ts); o.stop(ts + 0.2);
+    tone(t + i * 0.18, { type: 'square', freq: f, slideTo: f * 0.85, slideDur: 0.15, vol: 0.12, dur: 0.17 });
   });
 }
 
@@ -917,7 +898,7 @@ function beginGame() {
   saveMeta();
   stageIdx = startStage;
   hearts = 3;
-  loopCount = 0;
+  loopCount = startLoop;
   loopMissed = false;
   goalBroken = false;
   keeperFX = null;
@@ -944,7 +925,7 @@ function showIntro(newLoop) {
   introKeeperEl.textContent = `${k.emoji} GK ${k.name}`;
   introLineEl.textContent = `${k.intro[0]}${k.intro[1]}`;
   document.querySelector('.intro-announce').textContent = newLoop
-    ? '─ 世界は、二度目の伝説を求めた ─'
+    ? '─ 世界は覚醒し、二度目の伝説を求めた ─'
     : pick(ANNOUNCE_LINES);
   introOverlay.classList.remove('hidden');
   updateHUD();
@@ -974,7 +955,7 @@ function currentSpeed() { return tri(timeNow - phaseStart, 950 / gaugeSpeedup())
 function currentSize() { return tri(timeNow - phaseStart, 650 / gaugeSpeedup()); }
 
 function doShoot() {
-  const e = K(); // キーパーの強さは周回で変わらない (難化はゲージ速度で表現)
+  const e = K();
   const { angle, speed, size } = plan;
 
   const flightMs = 900 - 500 * speed;
@@ -1053,10 +1034,7 @@ function resolveShot() {
     stats.goals++;
     if (o === 'blow') stats.blows++;
     if (o === 'demolish') { stats.demolishes++; stats.blows++; }
-    // パネンカ: ど真ん中への軽いシュートを沈めた
-    if (o === 'goal' && Math.abs(shot.tx - L.cx) < L.goalHalf * 0.18 && shot.speed <= 0.45) {
-      stats.panenkas++;
-    }
+    if (k.awakened) stats.awakenedKills++;
     zukan.add(stageIdx);
     saveMeta();
   }
@@ -1896,12 +1874,40 @@ function drawKeeper() {
   ctx.globalAlpha = alpha;
   ctx.translate(x, baseY + yOff);
   ctx.rotate(spin || lean);
+  if (k.awakened) drawAwakenedAura(sz, alpha);
   k.draw(sz, { stretch, phase: keeperPhase });
   ctx.restore();
   ctx.globalAlpha = 1;
 }
 
 let keeperDiveX0 = 0; // シュート瞬間のキーパー位置
+
+// 覚醒キーパーの魔力オーラ(キーパー座標系で背後に描く)
+function drawAwakenedAura(sz, alpha) {
+  const cy = -sz * 0.45;
+  const pulse = 0.26 + 0.08 * Math.sin(timeNow / 260);
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(0, cy, sz * 0.1, 0, cy, sz * 0.85);
+  g.addColorStop(0, `rgba(190, 80, 255, ${pulse})`);
+  g.addColorStop(0.6, `rgba(120, 30, 220, ${pulse * 0.5})`);
+  g.addColorStop(1, 'rgba(80, 0, 160, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(0, cy, sz * 0.85, 0, Math.PI * 2);
+  ctx.fill();
+  // 立ちのぼる魔力の粒
+  for (let j = 0; j < 3; j++) {
+    const p = (timeNow / 1200 + j / 3) % 1;
+    const sx = Math.sin(timeNow / 500 + j * 2.6) * sz * 0.35;
+    ctx.globalAlpha = alpha * (1 - p) * 0.6;
+    ctx.fillStyle = '#c77dff';
+    ctx.beginPath();
+    ctx.arc(sx, cy + sz * 0.5 - p * sz * 1.1, sz * 0.02 + (1 - p) * sz * 0.02, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = alpha;
+}
 
 // ===== 描画: ボール・ゲージ =====
 function drawBall() {
