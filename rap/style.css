@@ -216,6 +216,35 @@ html, body {
   100% { opacity: 0; transform: scale(1.05); }
 }
 
+/* 章突入時のセリフ */
+#story-line {
+  position: fixed;
+  top: 44%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-street);
+  font-style: italic;
+  font-size: clamp(16px, 4.5vw, 24px);
+  color: #e8e8f0;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85), 0 4px 14px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+  padding: 0 20px;
+}
+
+#story-line.pop {
+  animation: story-pop 3s ease-out forwards;
+}
+
+@keyframes story-pop {
+  0%   { opacity: 0; transform: translateY(12px); }
+  12%  { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
 #hint {
   position: fixed;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);

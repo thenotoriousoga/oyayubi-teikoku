@@ -13,6 +13,7 @@ const swagWrap = document.getElementById('swag-wrap');
 const swagBar = document.getElementById('swag-bar');
 const tintEl = document.getElementById('tint');
 const bannerEl = document.getElementById('banner');
+const storyEl = document.getElementById('story-line');
 const hintEl = document.getElementById('hint');
 const startOverlay = document.getElementById('start-overlay');
 const startTapEl = document.getElementById('start-tap');
@@ -41,11 +42,12 @@ const FEVER_MS = 5000;
 const CHILL_MS = 5000;
 const SCORE_CAP = 9_999_999;
 
-// 開発用: ?safe=1 で障害物なし、?alleyAt=N / ?holeAt=N で N m先に強制配置
+// 開発用: ?safe=1 で障害物なし、?alleyAt=N / ?holeAt=N で N m先に強制配置、?startAt=N で N m地点から開始
 const DEBUG_PARAMS = new URLSearchParams(location.search);
 const DEBUG_SAFE = DEBUG_PARAMS.get('safe') === '1';
 const DEBUG_ALLEY_AT = Number(DEBUG_PARAMS.get('alleyAt')) || 0;
 const DEBUG_HOLE_AT = Number(DEBUG_PARAMS.get('holeAt')) || 0;
+const DEBUG_START_AT = Number(DEBUG_PARAMS.get('startAt')) || 0;
 let debugSpawned = false;
 
 // ===== ゲーム状態 =====
@@ -81,16 +83,20 @@ let hintTimer = 0;
 let best = 0;
 try { best = parseInt(localStorage.getItem('rap_best') || '0', 10) || 0; } catch (e) {}
 
-// ===== 地区 (距離で街並み・空気・コード進行が変わる) =====
+// ===== 章 (ラップドリームの物語。風景もビートのジャンルも章ごとに変わる) =====
 const DISTRICTS = [
-  { at: 0,    name: 'NEON STREET', fog: 0x0c0c1a, tint: 0xffffff, neon: 0.34, bh: [7, 24],
-    chords: { 0: [220.00, 261.63, 329.63], 8: [174.61, 261.63, 349.23] } }, // Am / F
-  { at: 600,  name: 'DA HIGHWAY',  fog: 0x0e141c, tint: 0x9fc6d8, neon: 0.12, bh: [4, 9],
-    chords: { 0: [164.81, 196.00, 246.94], 8: [130.81, 164.81, 196.00] } }, // Em / C
-  { at: 1400, name: 'DOWNTOWN',    fog: 0x160c20, tint: 0xd8a8f0, neon: 0.5, bh: [6, 14],
-    chords: { 0: [146.83, 174.61, 220.00], 8: [116.54, 146.83, 174.61] } }, // Dm / B♭
-  { at: 2400, name: 'SKYLINE',     fog: 0x1a1226, tint: 0xffe0a0, neon: 0.6, bh: [14, 34],
-    chords: { 0: [220.00, 261.63, 329.63], 8: [196.00, 246.94, 293.66] } }, // Am / G
+  { at: 0,    ch: 1, name: 'イナカ',            beat: 'boombap', fog: 0x0a0f1e, tint: 0x8a7a5e, neon: 0,    bh: [2, 4],
+    road: 'dirt',    ground: 0x0e1810, tex: 'rural',   props: 'rural',     story: '母ちゃん、俺ビッグになってくるわ' },
+  { at: 400,  ch: 2, name: 'シャッター商店街',   beat: 'jazzrap', fog: 0x10101a, tint: 0xb8a890, neon: 0.06, bh: [3, 6],
+    road: 'old',     ground: 0x101016, tex: 'shutter', props: 'shotengai', story: '地元じゃ負け知らず、だろ?' },
+  { at: 900,  ch: 3, name: '国道',              beat: 'gfunk',   fog: 0x0e141c, tint: 0x9fc6d8, neon: 0.1,  bh: [4, 9],
+    road: 'kokudou', ground: 0x0e141a, tex: 'dark',    props: 'kokudou',   story: '夜行バス?俺は走る' },
+  { at: 1500, ch: 4, name: 'アンダーグラウンド', beat: 'drill',   fog: 0x160c20, tint: 0x6a5a80, neon: 0.3,  bh: [6, 14],
+    road: 'city',    ground: 0x0a0a12, tex: 'dark',    props: 'ug',        story: 'まずは小箱を沸かす' },
+  { at: 2200, ch: 5, name: 'ネオン街',          beat: 'trap',    fog: 0x0c0c1a, tint: 0xffffff, neon: 0.6,  bh: [7, 24],
+    road: 'city',    ground: 0x0a0a12, tex: 'city',    props: 'none',      story: '俺の名前、もう聞こえてるだろ' },
+  { at: 3000, ch: 6, name: 'テッペン',          beat: 'party',   fog: 0x1a1226, tint: 0xffe0a0, neon: 0.5,  bh: [14, 34],
+    road: 'city',    ground: 0x0a0a12, tex: 'glass',   props: 'none',      story: 'ここが天下だ。母ちゃん見てるか' },
 ];
 let districtIdx = 0;
 function districtOf(d) {
@@ -236,17 +242,112 @@ function playLaser(freq, t, vol = 0.015) {
   tone(t, { type: 'sawtooth', freq: freq * 3, slideTo: freq / 2, vol, dur: 0.15 });
 }
 
-// --- シーケンサー (80BPM・16分。チル中はステップ2倍=BPM半分、フィーバー中はハット増量) ---
-const BEAT_STEP = 60 / 80 / 4;
+// --- ジャンル用の追加音源 ---
+function drumRide(t) {
+  noiseHit(t, { filter: 'highpass', freq: 5500, vol: 0.03, dur: 0.11 }); // ジャズのライド風
+}
+function playBassShort(freq, t, vol = 0.18) {
+  tone(t, { type: 'sine', freq, vol, dur: 0.28 }); // グライドなしの短いベース
+}
+function playWhistle(freq, to, t) {
+  tone(t, { type: 'sine', freq, slideTo: to, slideDur: 0.35, vol: 0.045, dur: 0.55 }); // Gファンクの口笛リード
+}
+function playCrackle(t) {
+  noiseHit(t, { filter: 'highpass', freq: 6500, vol: 0.004 + Math.random() * 0.007, dur: 0.02 }); // ヴァイナルの埃
+}
+function playCrowd(t) {
+  noiseHit(t, { filter: 'lowpass', freq: 1400, attack: 0.5, vol: 0.035, dur: 1.4 }); // 歓声スウェル
+}
+
+// --- シーケンサー: 章ごとにジャンルが変わる (チル中はBPM半分、フィーバー中はハット増量は全ジャンル共通) ---
+// kicks の値: 0 = キックのみ / 周波数 = 808を重ねる
+const BEAT_STYLES = {
+  boombap: {
+    bpm: 90, swing8: 0.55,
+    kicks: { 0: 0, 7: 0, 10: 0 }, snares: [4, 12], hatMode: 'boombap',
+    chords: { 0: [220.00, 261.63, 329.63, 392.00] }, // Am7
+    bass: [{ s: 0, f: 55.00 }, { s: 7, f: 82.41 }, { s: 10, f: 65.41 }],
+    fx: { crackle: true },
+  },
+  jazzrap: {
+    bpm: 92, swing8: 0.55,
+    kicks: { 0: 0, 10: 0 }, snares: [4, 12], hatMode: 'jazz',
+    chordsByMeasure: [
+      [146.83, 174.61, 220.00, 261.63], // Dm7
+      [196.00, 246.94, 293.66, 349.23], // G7
+      [130.81, 164.81, 196.00, 246.94], // Cmaj7
+      [130.81, 164.81, 196.00, 246.94],
+    ],
+    chordSteps: [0, 8],
+    bass: 'walking',
+    walk: [
+      [73.42, 87.31, 110.00, 130.81],
+      [98.00, 123.47, 146.83, 87.31],
+      [65.41, 82.41, 98.00, 110.00],
+      [65.41, 98.00, 82.41, 73.42],
+    ],
+    fx: {},
+  },
+  gfunk: {
+    bpm: 95,
+    kicks: { 0: 0, 10: 0 }, snares: [4, 12], hatMode: 'gfunk',
+    chords: { 0: [220.00, 261.63, 329.63] },
+    bass: [{ s: 0, f: 55.00 }, { s: 3, f: 110.00 }, { s: 8, f: 55.00 }, { s: 11, f: 110.00 }],
+    lead: [
+      { m: 0, s: 0, f: 880.00, to: 987.77 }, { m: 0, s: 8, f: 1174.66, to: 1046.50 },
+      { m: 1, s: 4, f: 987.77, to: 880.00 }, { m: 1, s: 12, f: 880.00, to: 659.25 },
+    ],
+    fx: {},
+  },
+  drill: {
+    bpm: 70,
+    kicks: { 0: 36.71, 6: 43.65, 8: 0, 14: 49.00 }, snares: [8], hatMode: 'drill',
+    chords: { 0: [146.83, 174.61, 220.00] },
+    chordEveryOtherMeasure: true,
+    bells: { 6: 1174.66 },
+    bellEveryOtherMeasure: true,
+    bass: [],
+    fx: {},
+  },
+  trap: { // 旧来のメインビートを完全再現
+    bpm: 80,
+    kicks: { 0: 55.00, 3: 48.99, 4: 0, 11: 58.27 }, snares: [8], snareRand: { s: 15, prob: 0.4 },
+    hatMode: 'trap',
+    chords: { 0: [220.00, 261.63, 329.63], 8: [174.61, 261.63, 349.23] }, // Am / F
+    bells: { 4: 880.00, 12: 1046.50 },
+    bass: [],
+    fx: { laserM: 3, chantS: 7, riserM: 7 },
+    breakMeasure: 7,
+  },
+  party: {
+    bpm: 104,
+    kicks: { 0: 0, 4: 0, 8: 0, 12: 0 }, snares: [4, 12], hatMode: 'party',
+    chordsByMeasure: [
+      [261.63, 329.63, 392.00], // C
+      [246.94, 293.66, 392.00], // G
+      [220.00, 261.63, 329.63], // Am
+      [220.00, 261.63, 349.23], // F
+    ],
+    chordSteps: [0, 8],
+    bassByMeasure: [65.41, 49.00, 55.00, 43.65],
+    bassSteps: [0, 8],
+    bass: [],
+    bellsByMeasure: [
+      { 0: 1046.50, 6: 1318.51, 10: 1567.98 },
+      { 0: 1567.98, 6: 1318.51, 10: 2093.00 },
+    ],
+    fx: { chantS: 7, riserEvery: 4, crowd: true },
+  },
+};
+
 let beatNextT = 0;
 let beatStep = 0;
 
-// コード進行は地区ごとに変わる (DISTRICTS[districtIdx].chords を参照)
-const DEFAULT_CHORDS = DISTRICTS[0].chords;
-const BELL_STEPS = { 4: 880.00, 12: 1046.50 };
-const KICK_STEPS = { 0: 55.00, 3: 48.99, 4: null, 11: 58.27 };
+function currentStyle() {
+  return BEAT_STYLES[DISTRICTS[districtIdx]?.beat] || BEAT_STYLES.trap;
+}
 
-function stepDur() { return BEAT_STEP * (chill > 0 ? 2 : 1); }
+function stepDur() { return 60 / currentStyle().bpm / 4 * (chill > 0 ? 2 : 1); }
 
 function scheduleBeat() {
   if (!AC) return;
@@ -260,26 +361,73 @@ function scheduleBeat() {
 }
 
 function playBeatStep(step, t) {
+  const st = currentStyle();
   const s = step % 16;
   const measure = Math.floor(step / 16) % 8;
-  const isBreak = measure === 7 && s >= 12;
+  const isBreak = st.breakMeasure != null && measure === st.breakMeasure && s >= 12;
   const sd = stepDur();
 
-  if (measure === 3 && s === 0) playLaser(600, t);
-  if (measure === 7 && s === 8) playRiser(t, sd * 4);
-  if (s === 7) playChant(t + sd / 2);
+  // スウィング: 8分裏 (s%4===2) を遅らせて跳ねさせる
+  if (st.swing8 && s % 4 === 2) t += st.swing8 * sd;
 
-  const chords = DISTRICTS[districtIdx]?.chords || DEFAULT_CHORDS;
-  if (chords[s]) chords[s].forEach((f) => playPiano(f, t, chill > 0 ? 0.055 : 0.04));
-  if (BELL_STEPS[s]) playBell(BELL_STEPS[s], t);
+  // FX
+  const fx = st.fx || {};
+  if (fx.crackle) playCrackle(t);
+  if (fx.laserM != null && measure === fx.laserM && s === 0) playLaser(600, t);
+  if (fx.chantS != null && s === fx.chantS) playChant(t + sd / 2);
+  if (fx.riserM != null && measure === fx.riserM && s === 8) playRiser(t, sd * 4);
+  if (fx.riserEvery && measure % fx.riserEvery === fx.riserEvery - 1 && s === 12) playRiser(t, sd * 4);
+  if (fx.crowd && measure % 8 === 7 && s === 0 && Math.random() < 0.5) playCrowd(t);
 
-  if (s in KICK_STEPS) {
-    drumKick(t);
-    if (KICK_STEPS[s]) play808(KICK_STEPS[s], t);
+  // コード
+  const chordVol = chill > 0 ? 0.055 : 0.04;
+  if (st.chordsByMeasure) {
+    const chord = st.chordsByMeasure[measure % st.chordsByMeasure.length];
+    if ((st.chordSteps || [0]).includes(s)) {
+      chord.forEach((f) => playPiano(f, t, s === 0 ? chordVol : chordVol * 0.75));
+    }
+  } else if (st.chords && st.chords[s]) {
+    if (!(st.chordEveryOtherMeasure && measure % 2 === 1)) {
+      st.chords[s].forEach((f) => playPiano(f, t, chordVol));
+    }
   }
 
-  if (s === 8) drumSnare(t);
-  if (s === 15 && !isBreak && Math.random() < 0.4) drumSnare(t);
+  // ベル
+  let bells = st.bells;
+  if (st.bellsByMeasure) bells = st.bellsByMeasure[measure % st.bellsByMeasure.length];
+  if (bells && bells[s] && !(st.bellEveryOtherMeasure && measure % 2 === 0)) {
+    playBell(bells[s], t);
+  }
+
+  // キック / 808
+  if (s in st.kicks) {
+    drumKick(t);
+    if (st.kicks[s]) play808(st.kicks[s], t);
+  }
+
+  // ベース
+  if (st.bass === 'walking') {
+    if (s % 4 === 0) {
+      const bar = st.walk[measure % st.walk.length];
+      playBassShort(bar[s / 4], t, 0.16);
+    }
+  } else if (st.bassByMeasure) {
+    if ((st.bassSteps || [0]).includes(s)) {
+      playBassShort(st.bassByMeasure[measure % st.bassByMeasure.length], t, 0.2);
+    }
+  } else if (st.bass) {
+    for (const b of st.bass) if (b.s === s) playBassShort(b.f, t);
+  }
+
+  // リード (Gファンクの口笛)
+  if (st.lead) {
+    const m2 = measure % 2;
+    for (const l of st.lead) if (l.m === m2 && l.s === s) playWhistle(l.f, l.to, t);
+  }
+
+  // スネア
+  if (st.snares.includes(s)) drumSnare(t);
+  if (st.snareRand && s === st.snareRand.s && !isBreak && Math.random() < st.snareRand.prob) drumSnare(t);
 
   if (isBreak) return;
   if (chill > 0) {
@@ -287,14 +435,38 @@ function playBeatStep(step, t) {
     if (s % 4 === 2) drumHat(t);
     return;
   }
-  if (s === 6 || s === 14) {
-    drumHat(t);
-    drumHat(t + sd / 2);
-  } else if (s === 11) {
-    const tri = sd / 3;
-    drumHat(t); drumHat(t + tri); drumHat(t + tri * 2);
-  } else {
-    drumHat(t, s === 7 || s === 15);
+  // ハット (ジャンルの骨格)
+  switch (st.hatMode) {
+    case 'boombap':
+    case 'gfunk':
+      if (s % 2 === 0) drumHat(t, s === 14);
+      break;
+    case 'jazz':
+      if (s % 2 === 0) drumRide(t);
+      break;
+    case 'drill':
+      if (s === 3 || s === 11) {
+        const tri = sd / 3;
+        drumHat(t); drumHat(t + tri); drumHat(t + tri * 2);
+      } else {
+        drumHat(t);
+      }
+      break;
+    case 'party':
+      if (s % 2 === 0) drumHat(t, s % 4 === 2);
+      break;
+    case 'trap':
+    default:
+      if (s === 6 || s === 14) {
+        drumHat(t);
+        drumHat(t + sd / 2);
+      } else if (s === 11) {
+        const tri = sd / 3;
+        drumHat(t); drumHat(t + tri); drumHat(t + tri * 2);
+      } else {
+        drumHat(t, s === 7 || s === 15);
+      }
+      break;
   }
   // フィーバー中は裏拍にもハットを刻んで密度を上げる
   if (fever > 0) drumHat(t + sd / 2);
@@ -407,30 +579,64 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// --- 路面 (テクスチャのオフセットスクロールで疾走感を出す) ---
+// --- 路面 (テクスチャのオフセットスクロールで疾走感を出す。章ごとに差し替え) ---
 const ROAD_LEN = 160;
 const ROAD_TILE = 8; // 1タイル8m
-function makeRoadTexture() {
+function makeRoadTexture(style) {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 256;
   const g = c.getContext('2d');
-  g.fillStyle = '#191922';
-  g.fillRect(0, 0, 256, 256);
-  // アスファルトの粒
-  for (let i = 0; i < 220; i++) {
-    g.fillStyle = Math.random() < 0.5 ? '#20202c' : '#131318';
-    g.fillRect(Math.random() * 256, Math.random() * 256, 2.5, 2.5);
-  }
-  // レーン区分の破線 (2本)
-  g.fillStyle = '#c9c9d4';
   const laneX = 256 / 3;
-  for (const x of [laneX, laneX * 2]) {
-    g.fillRect(x - 4, 20, 8, 90);
+  if (style === 'dirt') {
+    // 砂利道: 白線なし。レーンごとの轍 + 路肩の草
+    g.fillStyle = '#2a2118';
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 300; i++) {
+      g.fillStyle = Math.random() < 0.5 ? '#332a1e' : '#20180f';
+      g.fillRect(Math.random() * 256, Math.random() * 256, 2.5, 2.5);
+    }
+    g.fillStyle = '#3a3128';
+    for (const cx of [laneX / 2, laneX * 1.5, laneX * 2.5]) {
+      g.fillRect(cx - 20, 0, 10, 256);
+      g.fillRect(cx + 10, 0, 10, 256);
+    }
+    g.fillStyle = '#1c2e14';
+    for (let i = 0; i < 60; i++) {
+      g.fillRect(Math.random() * 16, Math.random() * 256, 3, 3);
+      g.fillRect(240 + Math.random() * 16, Math.random() * 256, 3, 3);
+    }
+  } else {
+    // アスファルト系
+    g.fillStyle = style === 'old' ? '#1c1c22' : '#191922';
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 220; i++) {
+      g.fillStyle = Math.random() < 0.5 ? '#20202c' : '#131318';
+      g.fillRect(Math.random() * 256, Math.random() * 256, 2.5, 2.5);
+    }
+    if (style === 'old') {
+      // ひび割れ
+      g.fillStyle = '#101014';
+      for (let i = 0; i < 14; i++) {
+        g.fillRect(Math.random() * 250, Math.random() * 250, 2 + Math.random() * 3, 14 + Math.random() * 30);
+      }
+    }
+    // レーン区分の破線 (2本)
+    g.fillStyle = style === 'old' ? '#7a7a84' : '#c9c9d4';
+    for (const x of [laneX, laneX * 2]) {
+      if (style === 'kokudou') g.fillRect(x - 3, 10, 6, 120);
+      else g.fillRect(x - 4, 20, 8, 90);
+    }
+    // 縁の実線 (商店街はなし)
+    if (style === 'kokudou') {
+      g.fillStyle = '#e8e8ee';
+      g.fillRect(2, 0, 6, 256);
+      g.fillRect(248, 0, 6, 256);
+    } else if (style === 'city') {
+      g.fillStyle = '#f2b90c';
+      g.fillRect(2, 0, 6, 256);
+      g.fillRect(248, 0, 6, 256);
+    }
   }
-  // 縁の実線
-  g.fillStyle = '#f2b90c';
-  g.fillRect(2, 0, 6, 256);
-  g.fillRect(248, 0, 6, 256);
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
@@ -438,7 +644,13 @@ function makeRoadTexture() {
   tex.anisotropy = 4;
   return tex;
 }
-const roadTex = makeRoadTexture();
+const ROAD_TEXES = {
+  dirt: makeRoadTexture('dirt'),
+  old: makeRoadTexture('old'),
+  kokudou: makeRoadTexture('kokudou'),
+  city: makeRoadTexture('city'),
+};
+let roadTex = ROAD_TEXES.dirt;
 const road = new THREE.Mesh(
   new THREE.PlaneGeometry(LANE_W * 3, ROAD_LEN),
   new THREE.MeshBasicMaterial({ map: roadTex })
@@ -447,15 +659,79 @@ road.rotation.x = -Math.PI / 2;
 road.position.set(0, 0, -ROAD_LEN / 2 + 12);
 scene.add(road);
 
-// 歩道 (左右)
+// 歩道 (左右) — 田舎と国道では非表示
 const walkMat = new THREE.MeshLambertMaterial({ color: 0x2a2a36 });
+const sidewalks = [];
 for (const side of [-1, 1]) {
   const walk = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.3, ROAD_LEN), walkMat);
   walk.position.set(side * (LANE_W * 1.5 + 1.7), 0.15, -ROAD_LEN / 2 + 12);
   scene.add(walk);
+  sidewalks.push(walk);
+}
+// ガードレール (国道のみ)
+const guardrails = [];
+{
+  const railMat = new THREE.MeshBasicMaterial({ color: 0xdadae2 });
+  for (const side of [-1, 1]) {
+    for (const y of [0.5, 0.28]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.12, ROAD_LEN), railMat);
+      rail.position.set(side * (LANE_W * 1.5 + 1.3), y, -ROAD_LEN / 2 + 12);
+      rail.visible = false;
+      scene.add(rail);
+      guardrails.push(rail);
+    }
+  }
+}
+// 田んぼ (イナカのみ)。区画グリッドをスクロールさせる
+const fields = [];
+let fieldTex = null;
+{
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#12240f';
+  g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = '#0a1608';
+  g.lineWidth = 3;
+  g.strokeRect(0, 0, 128, 128);
+  g.strokeRect(64, 0, 0.5, 128);
+  // 稲の列
+  g.fillStyle = '#183012';
+  for (let y = 8; y < 128; y += 12) g.fillRect(4, y, 120, 3);
+  fieldTex = new THREE.CanvasTexture(c);
+  fieldTex.wrapS = THREE.RepeatWrapping;
+  fieldTex.wrapT = THREE.RepeatWrapping;
+  fieldTex.repeat.set(2, ROAD_LEN / 16);
+  for (const side of [-1, 1]) {
+    const f = new THREE.Mesh(
+      new THREE.PlaneGeometry(34, ROAD_LEN),
+      new THREE.MeshBasicMaterial({ map: fieldTex })
+    );
+    f.rotation.x = -Math.PI / 2;
+    f.position.set(side * (LANE_W * 1.5 + 19), -0.01, -ROAD_LEN / 2 + 12);
+    f.visible = false;
+    scene.add(f);
+    fields.push(f);
+  }
+}
+// 山のシルエット (第1〜3章)。fog外なので fog:false 必須
+const mountainGroup = new THREE.Group();
+{
+  const mMat = new THREE.MeshBasicMaterial({ color: 0x0d1420, fog: false });
+  const specs = [
+    { x: -80, h: 30, w: 66 }, { x: -30, h: 24, w: 52 },
+    { x: 25, h: 32, w: 70 }, { x: 75, h: 22, w: 50 },
+  ];
+  for (const sp of specs) {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 5), mMat);
+    m.scale.set(sp.w, sp.h, sp.w);
+    m.position.set(sp.x, sp.h / 2, -115 - Math.random() * 25);
+    mountainGroup.add(m);
+  }
+  scene.add(mountainGroup);
 }
 // 路面外の地面
-const groundMat = new THREE.MeshBasicMaterial({ color: 0x0a0a12 });
+const groundMat = new THREE.MeshBasicMaterial({ color: 0x0e1810 });
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), groundMat);
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = -0.02;
@@ -492,23 +768,55 @@ scene.add(ground);
 // --- ネオンビル群 (左右プール、通過したら前方に回して使い回す) ---
 const NEON_TEXTS = ['天下', 'RAP', 'SWAG', 'YO!', '億', 'FLOW'];
 const NEON_COLORS = ['#ff4fd8', '#4fd8ff', '#f2b90c', '#7dff6e'];
-function makeWindowTexture() {
+function makeWindowTexture({ base = '#101018', litProb = 0.42, warmProb = 0.75, cell = 12, shutter = false } = {}) {
   const c = document.createElement('canvas');
   c.width = 64; c.height = 128;
   const g = c.getContext('2d');
-  g.fillStyle = '#101018';
+  g.fillStyle = base;
   g.fillRect(0, 0, 64, 128);
-  for (let y = 6; y < 122; y += 12) {
-    for (let x = 6; x < 58; x += 12) {
-      if (Math.random() < 0.42) {
-        g.fillStyle = Math.random() < 0.75 ? 'rgba(255,214,120,0.9)' : 'rgba(120,220,255,0.9)';
-        g.fillRect(x, y, 7, 8);
+  const winBottom = shutter ? 64 : 122; // シャッター店は下半分が店構え
+  for (let y = 6; y < winBottom; y += cell) {
+    for (let x = 6; x < 58; x += cell) {
+      if (Math.random() < litProb) {
+        g.fillStyle = Math.random() < warmProb ? 'rgba(255,214,120,0.9)' : 'rgba(120,220,255,0.9)';
+        g.fillRect(x, y, Math.min(9, cell - 4), Math.min(10, cell - 4));
       }
+    }
+  }
+  if (shutter) {
+    // 下半分: 錆びたシャッターの縞
+    for (let y = 68; y < 126; y += 8) {
+      g.fillStyle = (y / 8) % 2 === 0 ? '#3a3a42' : '#2e2e34';
+      g.fillRect(2, y, 60, 6);
+    }
+    g.fillStyle = 'rgba(74,53,39,0.55)';
+    for (let i = 0; i < 5; i++) {
+      g.fillRect(4 + Math.random() * 52, 68, 3, 56);
     }
   }
   const tex = new THREE.CanvasTexture(c);
   return tex;
 }
+// 章ごとの外壁セット
+const TEX_SETS = {
+  city: [makeWindowTexture(), makeWindowTexture(), makeWindowTexture()],
+  rural: [
+    makeWindowTexture({ base: '#131110', litProb: 0.15, warmProb: 1.0, cell: 16 }),
+    makeWindowTexture({ base: '#141210', litProb: 0.12, warmProb: 1.0, cell: 16 }),
+  ],
+  shutter: [
+    makeWindowTexture({ base: '#16161c', litProb: 0.12, warmProb: 0.9, shutter: true }),
+    makeWindowTexture({ base: '#18181e', litProb: 0.1, warmProb: 0.9, shutter: true }),
+  ],
+  dark: [
+    makeWindowTexture({ base: '#0e0e14', litProb: 0.12, warmProb: 0.5 }),
+    makeWindowTexture({ base: '#101016', litProb: 0.14, warmProb: 0.4 }),
+  ],
+  glass: [
+    makeWindowTexture({ base: '#1a1a24', litProb: 0.75, warmProb: 0.65, cell: 10 }),
+    makeWindowTexture({ base: '#1c1c26', litProb: 0.7, warmProb: 0.7, cell: 10 }),
+  ],
+};
 function makeNeonTexture(text, color) {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 128;
@@ -525,11 +833,17 @@ function makeNeonTexture(text, color) {
   g.shadowBlur = 0;
   return new THREE.CanvasTexture(c);
 }
-const windowTexes = [makeWindowTexture(), makeWindowTexture(), makeWindowTexture()];
+const windowTexes = TEX_SETS.city;
 const neonMats = [];
 for (const t of NEON_TEXTS) {
   neonMats.push(new THREE.MeshBasicMaterial({ map: makeNeonTexture(t, NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)]) }));
 }
+// アンダーグラウンド用 (ピンク紫の小箱) とテッペン用 (金白) の看板
+const ugSignMats = ['CLUB', 'BAR', 'MIC', '裏'].map((t, i) =>
+  new THREE.MeshBasicMaterial({ map: makeNeonTexture(t, i % 2 === 0 ? '#ff4fd8' : '#b06aff') }));
+const goldSignMats = ['VIP', '天下', 'SOLD OUT'].map((t, i) =>
+  new THREE.MeshBasicMaterial({ map: makeNeonTexture(t, i % 2 === 0 ? '#f2b90c' : '#ffffff') }));
+const SIGN_SETS = { default: neonMats, ug: ugSignMats, gold: goldSignMats };
 const buildings = [];
 const B_COUNT = 15;       // 片側の棟数
 const B_SPACING = 11;
@@ -554,18 +868,209 @@ function styleBuilding(bd) {
   const h = dist.bh[0] + Math.random() * (dist.bh[1] - dist.bh[0]);
   const d = 4 + Math.random() * 4;
   bd.mesh.scale.set(w, h, d);
+  const set = TEX_SETS[dist.tex] || TEX_SETS.city;
+  bd.mesh.material.map = set[Math.floor(Math.random() * set.length)];
+  bd.mesh.material.needsUpdate = true;
   bd.mesh.material.color.setHex(dist.tint);
   bd.x = bd.side * (LANE_W * 1.5 + 4.5 + Math.random() * 5 + w / 2);
   bd.h = h;
-  // ネオン看板の密度は地区で変わる。道路側の面に貼る
+  // ネオン看板の密度・種類は章で変わる。道路側の面に貼る
   bd.sign.visible = Math.random() < dist.neon;
   if (bd.sign.visible) {
-    bd.sign.material = neonMats[Math.floor(Math.random() * neonMats.length)];
+    const signSet = dist.props === 'ug' ? SIGN_SETS.ug : dist.tex === 'glass' ? SIGN_SETS.gold : SIGN_SETS.default;
+    bd.sign.material = signSet[Math.floor(Math.random() * signSet.length)];
     bd.sign.position.set(-bd.side * 0.51, 0.1 + Math.random() * 0.25, 0);
     bd.sign.rotation.y = -bd.side * Math.PI / 2;
     bd.sign.scale.set(0.9 / 1, 0.3, 1);
   }
 }
+
+// --- 路肩の小道具プール (全アーキタイプを子に持ち visibility 切替で使い回す) ---
+const props = [];
+const P_COUNT = 20;
+const P_SPACING = 8;
+{
+  const treeMat = new THREE.MeshLambertMaterial({ color: 0x1d3a1a });
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x3a2a1c });
+  const poleMat = new THREE.MeshLambertMaterial({ color: 0x22201e });
+  const trashMat = new THREE.MeshLambertMaterial({ color: 0x1a1a20 });
+  // 自販機テクスチャ (光るパネル)
+  function makeVendTexture(color) {
+    const c = document.createElement('canvas');
+    c.width = 32; c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = '#15151c';
+    g.fillRect(0, 0, 32, 64);
+    g.fillStyle = color;
+    g.fillRect(3, 4, 20, 40);
+    g.fillStyle = '#fff';
+    for (let y = 8; y < 40; y += 9) g.fillRect(5, y, 16, 5);
+    g.fillStyle = '#0a0a0e';
+    g.fillRect(4, 48, 24, 10);
+    return new THREE.CanvasTexture(c);
+  }
+  const vendMats = ['#d8342a', '#2a6ad8'].map((col) => new THREE.MeshBasicMaterial({ map: makeVendTexture(col) }));
+  // 国道の距離看板
+  function makeKmTexture(km) {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#0a5c2e';
+    g.fillRect(0, 0, 256, 128);
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 6;
+    g.strokeRect(6, 6, 244, 116);
+    g.fillStyle = '#ffffff';
+    g.textAlign = 'center';
+    g.font = '900 34px "M PLUS 1p", sans-serif';
+    g.fillText('東 京', 128, 50);
+    g.font = '900 40px "Archivo Black", sans-serif';
+    g.fillText(`${km} km`, 128, 100);
+    return new THREE.CanvasTexture(c);
+  }
+  const kmMats = [300, 150, 50].map((km) => new THREE.MeshBasicMaterial({ map: makeKmTexture(km) }));
+  // 街灯の暖色グロー
+  const glowC = document.createElement('canvas');
+  glowC.width = 64; glowC.height = 64;
+  {
+    const gg = glowC.getContext('2d');
+    const grad = gg.createRadialGradient(32, 32, 4, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255,214,140,0.95)');
+    grad.addColorStop(1, 'rgba(255,214,140,0)');
+    gg.fillStyle = grad;
+    gg.fillRect(0, 0, 64, 64);
+  }
+  const glowMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(glowC), transparent: true });
+
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < P_COUNT; i++) {
+      const g = new THREE.Group();
+      const parts = {};
+      // 木
+      const treeCone = new THREE.Mesh(new THREE.ConeGeometry(0.9, 2.2, 6), treeMat);
+      treeCone.position.y = 1.9;
+      const treeCone2 = new THREE.Mesh(new THREE.ConeGeometry(0.65, 1.6, 6), treeMat);
+      treeCone2.position.y = 3.0;
+      const trunk = new THREE.Mesh(boxGeo, trunkMat);
+      trunk.scale.set(0.24, 0.9, 0.24);
+      trunk.position.y = 0.45;
+      parts.tree = [treeCone, treeCone2, trunk];
+      // 電柱
+      const pole = new THREE.Mesh(boxGeo, poleMat);
+      pole.scale.set(0.18, 6, 0.18);
+      pole.position.y = 3;
+      const crossbar = new THREE.Mesh(boxGeo, poleMat);
+      crossbar.scale.set(1.6, 0.12, 0.12);
+      crossbar.position.y = 5.4;
+      parts.pole = [pole, crossbar];
+      // 自販機
+      const vend = new THREE.Mesh(boxGeo, vendMats[i % vendMats.length]);
+      vend.scale.set(0.9, 1.7, 0.75);
+      vend.position.y = 0.85;
+      parts.vend = [vend];
+      // 距離看板
+      const signBoard = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), kmMats[i % kmMats.length]);
+      signBoard.position.y = 3.2;
+      const sp1 = new THREE.Mesh(boxGeo, poleMat);
+      sp1.scale.set(0.12, 2.6, 0.12);
+      sp1.position.set(-1.2, 1.3, -0.05);
+      const sp2 = sp1.clone();
+      sp2.position.x = 1.2;
+      parts.sign = [signBoard, sp1, sp2];
+      // 街灯
+      const lpole = new THREE.Mesh(boxGeo, poleMat);
+      lpole.scale.set(0.14, 5.5, 0.14);
+      lpole.position.y = 2.75;
+      const arm = new THREE.Mesh(boxGeo, poleMat);
+      arm.scale.set(1.4, 0.1, 0.1);
+      arm.position.set(-side * 0.7, 5.4, 0);
+      const glow = new THREE.Sprite(glowMat);
+      glow.scale.set(1.7, 1.7, 1);
+      glow.position.set(-side * 1.3, 5.3, 0);
+      parts.light = [lpole, arm, glow];
+      // 小さいクラブネオン (地上)
+      const neonSm = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.55), ugSignMats[i % ugSignMats.length]);
+      neonSm.position.y = 1.3;
+      neonSm.rotation.y = -side * Math.PI / 2;
+      parts.neonSm = [neonSm];
+      // ゴミ
+      const trash = new THREE.Mesh(boxGeo, trashMat);
+      trash.scale.set(0.7, 0.55, 0.7);
+      trash.position.y = 0.27;
+      parts.trash = [trash];
+
+      for (const arr of Object.values(parts)) for (const m of arr) { m.visible = false; g.add(m); }
+      scene.add(g);
+      const p = { group: g, parts, side, z: i * P_SPACING + Math.random() * 4, x: 0, kind: 'none' };
+      props.push(p);
+    }
+  }
+}
+
+function styleProp(p) {
+  const dist = DISTRICTS[districtIdx];
+  for (const arr of Object.values(p.parts)) for (const m of arr) m.visible = false;
+  const r = Math.random();
+  let kind = 'none';
+  let x = p.side * (LANE_W * 1.5 + 7 + Math.random() * 8);
+  const mode = dist.props;
+  if (mode === 'rural') {
+    if (r < 0.55) kind = 'tree';
+    else if (r < 0.8) kind = 'pole';
+  } else if (mode === 'shotengai') {
+    if (r < 0.35) { kind = 'vend'; x = p.side * 7.2; }
+  } else if (mode === 'kokudou') {
+    const idx = Math.round(p.z / P_SPACING);
+    if (idx % 2 === 0) { kind = 'light'; x = p.side * 7.5; }
+    else if (r < 0.15) { kind = 'sign'; x = p.side * 9; }
+  } else if (mode === 'ug') {
+    if (r < 0.3) { kind = 'neonSm'; x = p.side * 7; }
+    else if (r < 0.5) { kind = 'trash'; x = p.side * 6.8; }
+  }
+  p.kind = kind;
+  p.x = x;
+  if (kind !== 'none') {
+    for (const m of p.parts[kind]) m.visible = true;
+    if (kind === 'tree') {
+      const s = 1.2 + Math.random() * 1.4;
+      p.group.scale.set(s, s, s);
+    } else {
+      p.group.scale.set(1, 1, 1);
+    }
+  }
+}
+for (const p of props) {
+  styleProp(p);
+  p.group.position.set(p.x, 0, -p.z);
+}
+
+// 章の見た目 (道路・地面・歩道・ガードレール・田んぼ・山) を切り替える
+function applyDistrictScenery(d) {
+  scene.fog.color.setHex(d.fog); // RUN中は毎フレーム上書きされるがタイトル画面用に
+  scene.background.copy(scene.fog.color);
+  roadTex = ROAD_TEXES[d.road];
+  road.material.map = roadTex;
+  road.material.needsUpdate = true;
+  groundMat.color.setHex(d.ground);
+  const noSidewalk = d.props === 'rural' || d.props === 'kokudou';
+  for (const w of sidewalks) w.visible = !noSidewalk;
+  for (const r of guardrails) r.visible = d.props === 'kokudou';
+  for (const f of fields) f.visible = d.props === 'rural';
+  mountainGroup.visible = d.ch <= 3;
+}
+
+// 章に入る: バナー + セリフ + ビート切替 + 風景切替
+function enterChapter(di, initial = false) {
+  const d = DISTRICTS[di];
+  showBanner(`第${d.ch}章 ${d.name}`);
+  showStory(d.story);
+  if (!initial && AC) playRiser(AC.currentTime, 0.6, 0.06);
+  beatNextT = 0;
+  beatStep = 0;
+  applyDistrictScenery(d);
+  if (DEBUG_PARAMS.has('debug')) console.log('[beat]', d.beat);
+}
+applyDistrictScenery(DISTRICTS[0]); // タイトル画面も第1章の見た目で
 
 // --- キャラクター生成 (低ポリ・ボックス組み立て) ---
 function makeBackPrintTexture(hoodieColor) {
@@ -748,9 +1253,9 @@ const BADGES = [
   { id: 'hustler',  medal: '💴', name: 'ハスラー',        desc: 'キャッシュ累計300枚',          cond: (s) => s.cash >= 300,     reward: { type: 'hoodie', id: 'green' } },
   { id: 'dodger',   medal: '😤', name: 'スカし職人',      desc: 'スカし累計100回',              cond: (s) => s.nearMiss >= 100, reward: { type: 'hoodie', id: 'white' } },
   { id: 'runner',   medal: '🚔', name: '逃走のプロ',      desc: 'ポリスから累計10回逃げ切る',    cond: (s) => s.escapes >= 10,   reward: { type: 'cap', id: 'red' } },
-  { id: 'highway',  medal: '📍', name: 'ハイウェイ進出',   desc: '600m到達',                    cond: (s) => s.maxDist >= 600,  reward: { type: 'cap', id: 'white' } },
-  { id: 'downtown', medal: '📍', name: 'ダウンタウンの顔', desc: '1400m到達',                   cond: (s) => s.maxDist >= 1400, reward: { type: 'hoodie', id: 'black' } },
-  { id: 'skyline',  medal: '🌃', name: 'スカイライン',    desc: '2400m到達',                   cond: (s) => s.maxDist >= 2400, reward: { type: 'hoodie', id: 'gold' } },
+  { id: 'shotengai',   medal: '📍', name: '商店街の星',            desc: '400m到達 (第2章)',        cond: (s) => s.maxDist >= 400,  reward: { type: 'cap', id: 'white' } },
+  { id: 'underground', medal: '🎤', name: 'アンダーグラウンドの主', desc: '1500m到達 (第4章)',       cond: (s) => s.maxDist >= 1500, reward: { type: 'hoodie', id: 'black' } },
+  { id: 'teppen',      medal: '🗼', name: 'テッペン',              desc: '3000m到達 (最終章)',      cond: (s) => s.maxDist >= 3000, reward: { type: 'hoodie', id: 'gold' } },
   { id: 'mote',     medal: '💁‍♀️', name: 'モテ期',         desc: 'ギャルに累計10回救われる',      cond: (s) => s.galSaves >= 10,  reward: { type: 'cap', id: 'pink' } },
   { id: 'alley',    medal: '🕳', name: '裏路地の主',      desc: '裏ルートに累計10回入る',        cond: (s) => s.alleys >= 10,    reward: { type: 'cap', id: 'gold' } },
   { id: 'king',     medal: '👑', name: 'KING OF DA CITY', desc: 'スコア6,000到達',              cond: (s) => s.maxScore >= 6000, reward: { type: 'hoodie', id: 'king' } },
@@ -1281,6 +1786,12 @@ function showBanner(text) {
   void bannerEl.offsetWidth;
   bannerEl.classList.add('pop');
 }
+function showStory(text) {
+  storyEl.textContent = `「${text}」`;
+  storyEl.classList.remove('pop');
+  void storyEl.offsetWidth;
+  storyEl.classList.add('pop');
+}
 function popText(text, cls = '') {
   const el = document.createElement('div');
   el.className = `pop-text ${cls}`;
@@ -1294,7 +1805,7 @@ function popText(text, cls = '') {
 function beginGame() {
   if (state === STATE.OVER && performance.now() - overAt < 450) return;
   state = STATE.RUN;
-  distance = 0;
+  distance = DEBUG_START_AT;
   collectPts = 0;
   swag = 0;
   cashStreak = 0;
@@ -1320,18 +1831,35 @@ function beginGame() {
   rapper.group.visible = true;
   gal.group.visible = false;
   galX = 0;
-  for (const e of entities) releaseMesh(e.type, e.mesh);
+  for (const e of entities) {
+    if (e.kind === 'marker' || e.kind === 'bestline') {
+      scene.remove(e.mesh);
+      e.mesh.traverse((o) => {
+        if (o.material && !Array.isArray(o.material)) {
+          if (o.material.map) o.material.map.dispose();
+          o.material.dispose();
+        }
+      });
+    } else {
+      releaseMesh(e.type, e.mesh);
+    }
+  }
   entities = [];
   spawnedUntil = 40;
   rowsSpawned = 0;
   swagMaxShown = false;
-  districtIdx = 0;
+  districtIdx = districtOf(distance);
   for (const m of rivalMarkers) m.spawned = false;
   fetchMarkers();
   for (const b of buildings) {
     styleBuilding(b);
     b.mesh.position.set(b.x, b.h / 2, -b.z);
   }
+  for (const p of props) {
+    styleProp(p);
+    p.group.position.set(p.x, 0, -p.z);
+  }
+  enterChapter(districtIdx, true);
   startOverlay.classList.add('hidden');
   overOverlay.classList.add('hidden');
   rankOverlay.classList.add('hidden');
@@ -1627,13 +2155,11 @@ function update(dt) {
   }
   if (swag < 80) swagMaxShown = false;
 
-  // 地区の切り替わり
+  // 章の切り替わり
   const di = districtOf(distance);
   if (di !== districtIdx) {
     districtIdx = di;
-    showBanner(DISTRICTS[di].name);
-    popText(`📍 ${DISTRICTS[di].name} に突入!`);
-    if (AC) playRiser(AC.currentTime, 0.6, 0.06);
+    enterChapter(di);
   }
 
   // 画面エフェクト
@@ -1711,8 +2237,17 @@ function update(dt) {
     }
     b.mesh.position.set(b.x, b.h / 2, -b.z);
   }
+  for (const p of props) {
+    p.z -= ds;
+    if (p.z < -14) {
+      p.z += P_COUNT * P_SPACING;
+      styleProp(p);
+    }
+    p.group.position.set(p.x, 0, -p.z);
+  }
   // 白線が手前に流れる向き (進行方向と逆) にスクロール
   roadTex.offset.y = (distance / ROAD_TILE) % 1;
+  if (fields[0].visible) fieldTex.offset.y = (distance / 16) % 1;
 
   // エンティティ更新
   const playerLane = Math.round(player.x);
