@@ -41,10 +41,9 @@ const FEVER_MS = 5000;
 const CHILL_MS = 5000;
 const SCORE_CAP = 9_999_999;
 
-// 開発用: ?safe=1 で障害物なし、?battleAt=60 でバトル開始距離を変更
+// 開発用: ?safe=1 で障害物なし
 const DEBUG_PARAMS = new URLSearchParams(location.search);
 const DEBUG_SAFE = DEBUG_PARAMS.get('safe') === '1';
-const BATTLE_FIRST_AT = Number(DEBUG_PARAMS.get('battleAt')) || 500;
 
 // ===== ゲーム状態 =====
 let state = STATE.TITLE;
@@ -916,135 +915,6 @@ function releaseMesh(type, mesh) {
   }
 }
 
-// ===== ラップバトル =====
-// 一定距離ごとにライバルが乱入。1小節アナウンス → 1小節相手のヴァース →
-// 1小節プレイヤーの番: ビートの4拍にリングが閉じる瞬間タップで判定
-let battle = null;
-let nextBattleAt = BATTLE_FIRST_AT;
-const rival = makeHumanoid({ hoodie: 0xb02030, skin: 0x8a5c34, cap: true, capColor: 0x5c1020, chain: true, mic: true });
-rival.micHand = true;
-rival.group.visible = false;
-scene.add(rival.group);
-let rivalX = 0;
-
-const battleUI = document.getElementById('battle-ui');
-const battleMsg = document.getElementById('battle-msg');
-const battleTargets = document.getElementById('battle-targets');
-
-function cancelBattle() {
-  if (!battle) return;
-  battle = null;
-  rival.group.visible = false;
-  battleUI.classList.add('hidden');
-  battleTargets.innerHTML = '';
-  nextBattleAt = distance + 400;
-}
-
-function startBattle() {
-  if (!AC) return; // 音が出ないとタイミングが取れない
-  const sd = stepDur();
-  // 次の小節頭に合わせて進行を組む
-  const stepsToBar = 16 - (beatStep % 16);
-  const barStart = beatNextT + stepsToBar * sd;
-  const rivalStart = barStart + 16 * sd;
-  const playerStart = rivalStart + 16 * sd;
-  const targets = [0, 4, 8, 12].map((s) => ({ t: playerStart + s * sd, judged: false, el: null }));
-  battle = { phase: 'announce', rivalStart, playerStart, targets, hits: 0 };
-  const lane = player.lane >= 1 ? 0 : player.lane + 1;
-  rivalX = lane * LANE_W;
-  rival.group.visible = true;
-  showBanner('RAP BATTLE!!');
-  battleMsg.textContent = '🎤 ライバル乱入!ビートを聴け…';
-  battleUI.classList.remove('hidden');
-  // 相手のヴァース (だみ声風の低音) をスケジュール
-  [0, 2, 4, 7, 8, 11, 12, 14].forEach((s, i) => {
-    tone(rivalStart + s * sd, { type: 'sawtooth', freq: 120 + (i % 3) * 25, slideTo: 88, vol: 0.07, dur: sd * 0.8 });
-  });
-  playLaser(500, AC.currentTime, 0.03);
-}
-
-function updateBattle() {
-  if (!battle || !AC) return;
-  const now = AC.currentTime;
-  if (battle.phase === 'announce' && now >= battle.rivalStart) {
-    battle.phase = 'rival';
-    battleMsg.textContent = '🔥 相手のヴァース…よく聴け';
-  } else if (battle.phase === 'rival' && now >= battle.playerStart - 0.12) {
-    battle.phase = 'player';
-    battleMsg.textContent = '🎤 お前の番だ!リングが重なる瞬間にタップ!!';
-    battle.targets.forEach((tg) => {
-      const el = document.createElement('div');
-      el.className = 'b-target';
-      const ring = document.createElement('span');
-      ring.className = 'b-ring';
-      ring.style.animationDuration = `${Math.max(0.1, tg.t - now).toFixed(3)}s`;
-      el.appendChild(ring);
-      tg.el = el;
-      battleTargets.appendChild(el);
-    });
-  } else if (battle.phase === 'player') {
-    for (const tg of battle.targets) {
-      if (!tg.judged && now > tg.t + 0.28) {
-        tg.judged = true;
-        if (tg.el) tg.el.classList.add('miss');
-      }
-    }
-    if (now > battle.targets[3].t + 0.45) resolveBattle();
-  }
-}
-
-function resolveBattle() {
-  const win = battle.hits >= 3;
-  battleUI.classList.add('hidden');
-  battleTargets.innerHTML = '';
-  if (win) {
-    const val = 1500 * multNow();
-    collectPts += val;
-    swag = Math.min(100, swag + 50);
-    showBanner('YOU WIN!!');
-    popText(`🏆 バトル勝利! +${scoreLabel(val)}`);
-    playFever();
-    vibrate([40, 30, 80]);
-  } else {
-    swag = 0;
-    showBanner('BOOED…');
-    popText('😤「ダサすぎw」', 'warn');
-    playFail();
-  }
-  battle = null;
-  rival.group.visible = false;
-  nextBattleAt = distance + 650;
-}
-
-function battleTap() {
-  if (!battle || battle.phase !== 'player' || !AC) return;
-  const now = AC.currentTime;
-  let best = null, bestDt = Infinity;
-  for (const tg of battle.targets) {
-    if (tg.judged) continue;
-    const d = Math.abs(now - tg.t);
-    if (d < bestDt) { bestDt = d; best = tg; }
-  }
-  if (!best) return;
-  if (bestDt <= 0.13) {
-    best.judged = true;
-    battle.hits++;
-    if (best.el) best.el.classList.add('perfect');
-    popText('PERFECT!', 'nice');
-    swag = Math.min(100, swag + 8);
-    playBell(1567.98, now, 0.04);
-  } else if (bestDt <= 0.28) {
-    best.judged = true;
-    battle.hits++;
-    if (best.el) best.el.classList.add('good');
-    popText('GOOD!');
-    playCoin();
-  } else {
-    popText('はやい…', 'warn');
-    playTap();
-  }
-}
-
 // ===== ライバルの散り際マーカー (TOP10) =====
 let rivalMarkers = [];
 async function fetchMarkers() {
@@ -1218,8 +1088,6 @@ function beginGame() {
   rowsSpawned = 0;
   swagMaxShown = false;
   districtIdx = 0;
-  cancelBattle();
-  nextBattleAt = BATTLE_FIRST_AT;
   for (const m of rivalMarkers) m.spawned = false;
   fetchMarkers();
   for (const b of buildings) {
@@ -1237,7 +1105,6 @@ function beginGame() {
 
 function goTitle() {
   state = STATE.TITLE;
-  cancelBattle();
   overOverlay.classList.add('hidden');
   rankOverlay.classList.add('hidden');
   tintEl.className = '';
@@ -1344,7 +1211,6 @@ function hitObstacle(ob) {
   ob.dead = true;
   ob.vy = 7;
   ob.spin = 4;
-  cancelBattle();
   popText('🚔 ポリスだ!転ぶな!逃げろ!', 'warn');
   showBanner('RUN!!');
   playSiren();
@@ -1360,7 +1226,6 @@ function die(reason) {
   chase = 0;
   cop.group.visible = false;
   copLight.intensity = 0;
-  cancelBattle();
   tintEl.className = '';
   overReasonEl.textContent = DEATH_REASONS[reason] || '路上に散った';
   playCrash();
@@ -1465,15 +1330,11 @@ function update(dt) {
   }
   if (player.sliding > 0) player.sliding -= dt;
 
-  // ラップバトル
-  if (!battle && chase <= 0 && distance > nextBattleAt) startBattle();
-  updateBattle();
-
-  // ワールドを流す + スポーン (バトル中は障害物を出さない)
+  // ワールドを流す + スポーン
   spawnedUntil -= ds;
   while (spawnedUntil < DRAW_DIST) {
     spawnedUntil += rowGap();
-    if (!battle && !DEBUG_SAFE) spawnRow(spawnedUntil);
+    if (!DEBUG_SAFE) spawnRow(spawnedUntil);
   }
 
   // TOP10の散り際マーカー
@@ -1648,12 +1509,6 @@ function loop(t) {
       poseRunner(gal, phase + 1.7, 0, 0, galX);
       gal.group.position.z = 1.6;
     }
-    // バトル中のライバル: 隣レーンを並走、自分のヴァース中はノリノリ
-    if (battle) {
-      const rphase = battle.phase === 'rival' ? phase * 1.35 : phase + 0.5;
-      poseRunner(rival, rphase, battle.phase === 'rival' ? Math.abs(Math.sin(t * 0.008)) * 0.25 : 0, 0, rivalX);
-      rival.group.position.z = -0.9;
-    }
     // ポリス: 追跡中は真後ろに迫り、終わり際は追いつけず消える
     const chasing = chase > 0 && state === STATE.RUN;
     cop.group.visible = chasing;
@@ -1704,12 +1559,6 @@ function updateHUD() {
 let pDown = null;
 window.addEventListener('pointerdown', (e) => {
   ensureAudio();
-  // バトルの回答フェーズ中はタップ=リズム入力
-  if (state === STATE.RUN && battle && battle.phase === 'player') {
-    battleTap();
-    pDown = null;
-    return;
-  }
   pDown = { x: e.clientX, y: e.clientY };
 });
 window.addEventListener('pointerup', (e) => {
@@ -1718,7 +1567,6 @@ window.addEventListener('pointerup', (e) => {
   const dy = e.clientY - pDown.y;
   pDown = null;
   if (state !== STATE.RUN) return;
-  if (battle && battle.phase === 'player') return;
   const SWIPE_MIN = 24;
   if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_MIN) return;
   if (Math.abs(dx) > Math.abs(dy)) {
@@ -1736,10 +1584,6 @@ window.addEventListener('keydown', (e) => {
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
     e.preventDefault();
     ensureAudio();
-  }
-  if (state === STATE.RUN && battle && battle.phase === 'player') {
-    if (e.key === ' ' || e.key === 'ArrowUp') battleTap();
-    return;
   }
   if (e.key === 'ArrowLeft') setLane(-1);
   else if (e.key === 'ArrowRight') setLane(1);
