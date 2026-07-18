@@ -6,6 +6,7 @@
   --danger: #ff5a48;
   --ink: #0c0c0e;
   --font-logo: 'Archivo Black', sans-serif;
+  --font-street: 'Reggae One', 'M PLUS 1p', 'Hiragino Kaku Gothic ProN', sans-serif;
   --font-display: 'M PLUS 1p', 'Hiragino Kaku Gothic ProN', sans-serif;
   --font-pop: 'Mochiy Pop One', 'Hiragino Kaku Gothic ProN', sans-serif;
   --font-body: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', sans-serif;
@@ -262,7 +263,7 @@ html, body {
 }
 
 .logo {
-  font-family: var(--font-logo);
+  font-family: var(--font-street);
   font-style: italic;
   font-size: clamp(54px, 18vw, 100px);
   line-height: 1.05;
@@ -292,7 +293,7 @@ html, body {
 
 /* ===== 結果画面 ===== */
 .overlay h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-street);
   font-size: clamp(28px, 8.5vw, 48px);
   color: var(--danger);
   text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
@@ -322,7 +323,7 @@ html, body {
 }
 
 #rank-title {
-  font-family: var(--font-display);
+  font-family: var(--font-street);
   font-size: clamp(20px, 6.5vw, 32px);
   color: var(--gold);
 }
@@ -457,7 +458,7 @@ html, body {
 }
 
 .rank-heading {
-  font-family: var(--font-display);
+  font-family: var(--font-street);
   color: var(--gold) !important;
 }
 

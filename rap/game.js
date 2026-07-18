@@ -70,7 +70,7 @@ function totalScore() {
 function baseMult() { return swag >= 80 ? 4 : swag >= 40 ? 2 : 1; }
 function multNow() { return baseMult() * (fever > 0 ? 2 : 1); }
 function speedNow() {
-  const s = Math.min(30, 11 + distance * 0.045);
+  const s = Math.min(26, 10 + distance * 0.03);
   return chill > 0 ? s * 0.6 : s;
 }
 
@@ -85,6 +85,12 @@ function rankTitle(sc) {
   return '路上の卵';
 }
 
+const OVER_HEADS = [
+  'MIC DROP…早すぎだろ',
+  'ビート、途切れたな',
+  '今夜はここまでだHOMIE',
+  'REC STOP。テープはここまで',
+];
 const OVER_COMMENTS = [
   'まだテープも擦り切れてねぇぞ',
   'その程度のフロウで天下?笑わせんな',
@@ -509,7 +515,32 @@ function styleBuilding(bd) {
 }
 
 // --- キャラクター生成 (低ポリ・ボックス組み立て) ---
-function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain }) {
+function makeBackPrintTexture(hoodieColor) {
+  // パーカー背面の「天下」バックプリント
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = '#' + hoodieColor.toString(16).padStart(6, '0');
+  g.fillRect(0, 0, 128, 128);
+  g.save();
+  g.translate(64, 60);
+  g.rotate(-0.08);
+  g.font = '900 46px "M PLUS 1p", sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.shadowColor = 'rgba(0,0,0,0.8)';
+  g.shadowOffsetX = 4; g.shadowOffsetY = 4;
+  g.fillStyle = '#f2b90c';
+  g.fillText('天下', 0, 0);
+  g.restore();
+  g.font = '900 17px "Archivo Black", sans-serif';
+  g.textAlign = 'center';
+  g.fillStyle = '#f2b90c';
+  g.fillText('TENKA RUN', 64, 102);
+  return new THREE.CanvasTexture(c);
+}
+
+function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain, shades, mic, brimBack, backPrint }) {
   const g = new THREE.Group();
   const mats = {
     hoodie: new THREE.MeshLambertMaterial({ color: hoodie }),
@@ -519,7 +550,16 @@ function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain }) {
     white: new THREE.MeshLambertMaterial({ color: 0xf0f0f0 }),
     hair: new THREE.MeshLambertMaterial({ color: hair || 0x221a12 }),
   };
-  const torso = new THREE.Mesh(boxGeo, mats.hoodie);
+  let torso;
+  if (backPrint) {
+    // 背面 (+z) だけバックプリントのテクスチャに差し替え
+    const backMat = new THREE.MeshLambertMaterial({ map: makeBackPrintTexture(hoodie) });
+    torso = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [
+      mats.hoodie, mats.hoodie, mats.hoodie, mats.hoodie, backMat, mats.hoodie,
+    ]);
+  } else {
+    torso = new THREE.Mesh(boxGeo, mats.hoodie);
+  }
   torso.scale.set(0.72, 0.82, 0.44);
   torso.position.y = 1.06;
   g.add(torso);
@@ -539,7 +579,8 @@ function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain }) {
     g.add(capTop);
     const brim = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: capColor }));
     brim.scale.set(0.44, 0.05, 0.3);
-    brim.position.set(0, 2.0, -0.34); // 前方(-z)につば
+    // 通常は前方(-z)につば。brimBack なら後ろかぶり
+    brim.position.set(0, 2.0, brimBack ? 0.34 : -0.34);
     g.add(brim);
   } else {
     const pony = new THREE.Mesh(boxGeo, mats.hair);
@@ -554,14 +595,21 @@ function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain }) {
   }
   if (chain) {
     const ch = new THREE.Mesh(boxGeo, mats.gold);
-    ch.scale.set(0.3, 0.09, 0.06);
+    ch.scale.set(0.34, 0.09, 0.06);
     ch.position.set(0, 1.32, -0.25);
     g.add(ch);
     const pendant = new THREE.Mesh(boxGeo, mats.gold);
-    pendant.scale.set(0.13, 0.13, 0.06);
-    pendant.position.set(0, 1.2, -0.26);
+    pendant.scale.set(0.17, 0.17, 0.06);
+    pendant.position.set(0, 1.18, -0.26);
     pendant.rotation.z = Math.PI / 4;
     g.add(pendant);
+  }
+  if (shades) {
+    // サングラス (顔の前面に横長の黒バー)
+    const sg = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0x0a0a0c }));
+    sg.scale.set(0.44, 0.11, 0.06);
+    sg.position.set(0, 1.88, -0.22);
+    g.add(sg);
   }
   const limbs = {};
   for (const [key, sx] of [['armL', -0.45], ['armR', 0.45]]) {
@@ -574,6 +622,21 @@ function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain }) {
     hand.scale.set(0.16, 0.14, 0.18);
     hand.position.y = -0.62;
     pivot.add(arm); pivot.add(hand);
+    if (mic && key === 'armR') {
+      // 右手に金のマイク
+      const grip = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045, 0.055, 0.24, 8),
+        new THREE.MeshLambertMaterial({ color: 0x222228 })
+      );
+      grip.position.set(0, -0.72, -0.06);
+      grip.rotation.x = -0.9;
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 10, 8),
+        new THREE.MeshLambertMaterial({ color: 0xf2b90c, emissive: 0x554000 })
+      );
+      head.position.set(0, -0.8, -0.17);
+      pivot.add(grip); pivot.add(head);
+    }
     g.add(pivot);
     limbs[key] = pivot;
   }
@@ -594,10 +657,43 @@ function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain }) {
 }
 
 // キャラの正面は -z (つば・チェーンの向き)。プレイヤーは進行方向(-z)を向くので回転不要
-const rapper = makeHumanoid({ hoodie: 0x3a2b5e, skin: 0xc9995c, cap: true, capColor: 0x151519, chain: true });
+// ラッパー: 後ろかぶりキャップ + サングラス + ゴールドチェーン + 右手にマイク
+const rapper = makeHumanoid({
+  hoodie: 0x3a2b5e, skin: 0xc9995c,
+  cap: true, capColor: 0x151519, brimBack: true,
+  chain: true, shades: true, mic: true, backPrint: true,
+});
+rapper.micHand = true; // 走行中もマイクを顔の横にキープ
 scene.add(rapper.group);
 
-const gal = makeHumanoid({ hoodie: 0xd94f9e, skin: 0xe0b184, cap: false, hair: 0x5a3210, chain: false });
+// ギャル: 金髪ロング + 日焼け肌 + ピンクトップス + ミニスカ
+const gal = makeHumanoid({ hoodie: 0xff5fb0, skin: 0xc98a5a, cap: false, hair: 0xf5d76e, chain: false });
+{
+  const blonde = new THREE.MeshLambertMaterial({ color: 0xf5d76e });
+  // 背中まで流れるロングヘア
+  const back = new THREE.Mesh(boxGeo, blonde);
+  back.scale.set(0.5, 0.8, 0.16);
+  back.position.set(0, 1.55, 0.3);
+  gal.group.add(back);
+  // サイドの髪
+  for (const sx of [-0.27, 0.27]) {
+    const strand = new THREE.Mesh(boxGeo, blonde);
+    strand.scale.set(0.13, 0.55, 0.13);
+    strand.position.set(sx, 1.68, 0.12);
+    gal.group.add(strand);
+  }
+  // ミニスカート
+  const skirt = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }));
+  skirt.scale.set(0.82, 0.24, 0.54);
+  skirt.position.y = 0.74;
+  gal.group.add(skirt);
+  // ハートのアクセ
+  const heart = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0xff2f7e, emissive: 0x660022 }));
+  heart.scale.set(0.12, 0.12, 0.05);
+  heart.position.set(0, 1.3, -0.26);
+  heart.rotation.z = Math.PI / 4;
+  gal.group.add(heart);
+}
 gal.group.scale.set(0.88, 0.88, 0.88);
 gal.group.visible = false;
 scene.add(gal.group);
@@ -626,11 +722,39 @@ function makeBarricade() {
   g.add(lamp);
   return g;
 }
+const HATER_INSULTS = ['ダサw', '帰れw', 'ザコがw', '無理無理w', 'センスねぇ~'];
+const insultMats = HATER_INSULTS.map((text) => {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 96;
+  const g = c.getContext('2d');
+  // 白吹き出し + 黒文字
+  g.fillStyle = '#ffffff';
+  const r = 26;
+  g.beginPath();
+  g.roundRect(6, 6, 244, 70, r);
+  g.fill();
+  g.beginPath();
+  g.moveTo(112, 74); g.lineTo(128, 94); g.lineTo(144, 74);
+  g.fill();
+  g.font = '900 40px "M PLUS 1p", sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#16161c';
+  g.fillText(text, 128, 42);
+  return new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true });
+});
+
 function makeHater() {
   const h = makeHumanoid({ hoodie: 0x24303a, skin: 0x9c7a52, cap: true, capColor: 0x0c0c0e, chain: false });
   h.group.rotation.y = Math.PI; // プレイヤーの方を向く
-  h.limbs.armL.rotation.z = 0.6;
-  h.limbs.armR.rotation.z = -0.6;
+  // 左腕は腰、右腕は拳を振り上げる (振りはフレームごとにアニメーション)
+  h.limbs.armL.rotation.z = 0.7;
+  h.limbs.armR.rotation.x = -2.4;
+  // 頭上に煽り吹き出し
+  const bubble = new THREE.Sprite(insultMats[Math.floor(Math.random() * insultMats.length)]);
+  bubble.scale.set(1.7, 0.64, 1);
+  bubble.position.set(0.2, 2.75, 0);
+  h.group.add(bubble);
+  h.group.userData.limbs = h.limbs;
   return h.group;
 }
 function makeTrash() {
@@ -699,7 +823,7 @@ const ITEM_DEFS = {
   mic: { emoji: '🎤', scale: 1.35 },
   weed: { emoji: '🍃', scale: 1.35 },
   bling: { emoji: '💎', scale: 1.35 },
-  gal: { emoji: '👩', scale: 1.5 },
+  gal: { emoji: '💁‍♀️', scale: 1.5 },
 };
 for (const def of Object.values(ITEM_DEFS)) {
   def.mat = new THREE.SpriteMaterial({ map: makeEmojiTexture(def.emoji), transparent: true });
@@ -741,21 +865,35 @@ function releaseMesh(type, mesh) {
 }
 
 // ===== スポナー =====
-// b=バリケード h=ヘイター t=ゴミ缶(ジャンプ) s=看板(スライド) n=なし
-// どの行も「空きレーン or ジャンプ/スライドで抜けられるレーン」を必ず含む
-const ROW_PATTERNS = [
+// b=バリケード(ジャンプ可) h=ヘイター t=ゴミ缶(ジャンプ) s=看板(スライド) n=なし
+// どの行も「空きレーン or ジャンプ/スライドで抜けられるレーン」を必ず含む。
+// 序盤は障害物1個の行だけ → 距離で2個・3個の行を解禁して難度を上げる
+const EASY_PATTERNS = [
   'bnn', 'nbn', 'nnb', 'hnn', 'nhn', 'nnh',
+  'tnn', 'ntn', 'nnt', 'snn', 'nsn', 'nns',
+];
+const MID_PATTERNS = [
   'bbn', 'bnb', 'nbb', 'hbn', 'nbh', 'bhn', 'nhb', 'hnb', 'bnh',
-  'ttt', 'sss', 'tnt', 'sns', 'tts', 'stt',
-  'tnb', 'bnt', 'snb', 'bns', 'tnh', 'hnt', 'snh', 'hns',
+  'tnt', 'sns', 'tnb', 'bnt', 'snb', 'bns', 'tnh', 'hnt', 'snh', 'hns',
+  'ntb', 'btn', 'nsb', 'bsn', 'nth', 'htn', 'tsn', 'nst',
+];
+const HARD_PATTERNS = [
+  'ttt', 'sss', 'tts', 'stt',
   'bts', 'stb', 'hts', 'sth', 'bst', 'tsb',
-  'ntb', 'btn', 'nsb', 'bsn', 'nth', 'htn',
 ];
 const TYPE_OF = { b: 'barricade', h: 'hater', t: 'trash', s: 'sign' };
 
+function pickPattern() {
+  // <250m: 単体のみ / <700m: 単体+2個 / それ以降: 全部
+  const pool = [...EASY_PATTERNS];
+  if (distance > 250) pool.push(...MID_PATTERNS);
+  if (distance > 700) pool.push(...MID_PATTERNS, ...HARD_PATTERNS);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function spawnRow(z) {
   rowsSpawned++;
-  const pat = ROW_PATTERNS[Math.floor(Math.random() * ROW_PATTERNS.length)];
+  const pat = pickPattern();
   const openLanes = [];
   for (let i = 0; i < 3; i++) {
     const ch = pat[i];
@@ -792,9 +930,9 @@ function spawnItem(type, lane, z) {
 }
 
 function rowGap() {
-  // 速度が上がるほど行間を詰める (18m → 9m)
-  const t = (speedNow() - 11) / 19;
-  return 18 - Math.min(1, Math.max(0, t)) * 9;
+  // 距離が伸びるほど行間を詰める (22m → 13m、900m でほぼ最小)
+  const t = Math.min(1, distance / 900);
+  return 22 - t * 9;
 }
 
 // ===== ポップテキスト・バナー =====
@@ -833,7 +971,7 @@ function beginGame() {
   galX = 0;
   for (const e of entities) releaseMesh(e.type, e.mesh);
   entities = [];
-  spawnedUntil = 26;
+  spawnedUntil = 40;
   rowsSpawned = 0;
   swagMaxShown = false;
   startOverlay.classList.add('hidden');
@@ -911,7 +1049,7 @@ function grantItem(type) {
     hasGal = true;
     gal.group.visible = true;
     galX = player.x;
-    popText('👩「ついてくわ!」');
+    popText('💁‍♀️「まかせて♡」');
     playGalGet();
   }
 }
@@ -937,7 +1075,7 @@ function hitObstacle(ob) {
     ob.dead = true;
     ob.vy = 7;
     ob.spin = 5;
-    popText('👩「キャーッ!!」身代わり!', 'warn');
+    popText('💁‍♀️「キャーッ!!」身代わり!', 'warn');
     playGalScream();
     vibrate(60);
     return;
@@ -966,6 +1104,7 @@ function endGame() {
     best = sc;
     try { localStorage.setItem('rap_best', String(best)); } catch (e) {}
   }
+  document.getElementById('over-head').textContent = OVER_HEADS[Math.floor(Math.random() * OVER_HEADS.length)];
   rankTitleEl.textContent = rankTitle(sc);
   overScoreEl.textContent = scoreLabel(sc);
   overBestEl.textContent = scoreLabel(best);
@@ -1049,7 +1188,8 @@ function update(dt) {
     }
     b.mesh.position.set(b.x, b.h / 2, -b.z);
   }
-  roadTex.offset.y = -(distance / ROAD_TILE) % 1;
+  // 白線が手前に流れる向き (進行方向と逆) にスクロール
+  roadTex.offset.y = (distance / ROAD_TILE) % 1;
 
   // エンティティ更新
   const playerLane = Math.round(player.x);
@@ -1068,6 +1208,14 @@ function update(dt) {
     if (e.kind === 'item') {
       e.mesh.position.y = 0.95 + Math.sin(timeNow * 0.004 + e.z) * 0.12;
     }
+    if (e.type === 'hater') {
+      // 拳を振り上げて体を揺らす煽りモーション
+      const seed = e.mesh.id * 1.7;
+      const l = e.mesh.userData.limbs;
+      if (l) l.armR.rotation.x = -2.2 + Math.sin(timeNow * 0.013 + seed) * 0.5;
+      e.mesh.rotation.y = Math.PI + Math.sin(timeNow * 0.005 + seed) * 0.2;
+      e.mesh.position.y = Math.abs(Math.sin(timeNow * 0.009 + seed)) * 0.12;
+    }
 
     if (Math.abs(e.z) < HIT_Z && e.lane === playerLane) {
       if (e.kind === 'item') {
@@ -1077,8 +1225,10 @@ function update(dt) {
         continue;
       }
       // 障害物: 回避条件チェック (無敵中はすり抜け)
+      // バリケードは見た目通りジャンプで飛び越せる (ヘイターは人なので不可)
       const avoided =
         (e.type === 'trash' && player.y > 0.55) ||
+        (e.type === 'barricade' && player.y > 0.95) ||
         (e.type === 'sign' && player.sliding > 0 && player.y < 0.2);
       if (!avoided && invuln <= 0) {
         hitObstacle(e);
@@ -1093,7 +1243,7 @@ function update(dt) {
         swag = Math.min(100, swag + 8);
         popText('NICE! SWAG+', 'nice');
       }
-      if (e.type === 'trash' || e.type === 'sign') {
+      if (e.type === 'trash' || e.type === 'sign' || e.type === 'barricade') {
         // 飛び越え/くぐり成功もSWAG
         if (e.lane === playerLane) {
           swag = Math.min(100, swag + 6);
@@ -1123,7 +1273,12 @@ function poseRunner(h, phase, y, slideAmt, xPos) {
   h.limbs.legL.rotation.x = swing * (1 - slideAmt);
   h.limbs.legR.rotation.x = -swing * (1 - slideAmt);
   h.limbs.armL.rotation.x = -swing * 0.8 * (1 - slideAmt);
-  h.limbs.armR.rotation.x = swing * 0.8 * (1 - slideAmt);
+  if (h.micHand) {
+    // マイクの右手は顔の横で小さく揺らす (ラップしながら走る)
+    h.limbs.armR.rotation.x = -2.0 + swing * 0.15;
+  } else {
+    h.limbs.armR.rotation.x = swing * 0.8 * (1 - slideAmt);
+  }
   if (y > 0.05) {
     // ジャンプ: 手を上げ脚をたたむ
     h.limbs.legL.rotation.x = 0.9;
@@ -1193,7 +1348,7 @@ function updateHUD() {
   let fx = '';
   if (fever > 0) fx += `<span class="fx-chip">🎤 ${(fever / 1000).toFixed(1)}s</span>`;
   if (chill > 0) fx += `<span class="fx-chip chill">🍃 ${(chill / 1000).toFixed(1)}s</span>`;
-  if (hasGal) fx += `<span class="fx-chip">👩 身代わり</span>`;
+  if (hasGal) fx += `<span class="fx-chip">💁‍♀️ 身代わり</span>`;
   fxHud.innerHTML = fx;
 }
 

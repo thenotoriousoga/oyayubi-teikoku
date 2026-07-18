@@ -8,7 +8,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Mochiy+Pop+One&family=M+PLUS+1p:wght@800;900&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Reggae+One&family=Mochiy+Pop+One&family=M+PLUS+1p:wght@800;900&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
     { "imports": { "three": "./lib/three.module.min.js" } }
@@ -31,22 +31,22 @@
   <div id="hint">← → スワイプでレーン / ↑ ジャンプ / ↓ スライド</div>
 
   <div id="start-overlay" class="overlay">
-    <div class="eyebrow">FROM THE BOTTOM TO THE TOP</div>
+    <div class="eyebrow">REAL RECOGNIZE REAL</div>
     <h1 class="logo">天下ラン</h1>
-    <p class="logo-sub">ストリートから頂点へ</p>
-    <p class="rules">夜の街を駆け抜けろ。<b>スワイプ</b>でかわし、<b>キャッシュ</b>を掴め。<br>🎤 マイクでフィーバー、🍃 でチルタイム、<br>💎 ブリンブリンでSWAG爆上げ、👩 は身代わりになってくれる。</p>
+    <p class="logo-sub">テッペン取るまで、止まらねぇ</p>
+    <p class="rules">ビートに乗って夜の街をブチ抜け。<br><b>スワイプ</b>でヘイターをスカし、<b>キャッシュ</b>は総取り。<br>🎤 でフィーバー / 🍃 でチル / 💎 でSWAG爆上げ<br>💁‍♀️ ギャルは体張ってお前を守る。</p>
     <div class="entry-row">
       <input id="name-input" maxlength="10" placeholder="MCネーム (10文字まで)" autocomplete="off">
     </div>
     <div class="start-btns">
-      <button id="show-rank-start" class="rank-btn">🏆 天下ランキング</button>
+      <button id="show-rank-start" class="rank-btn">👑 天下ランキング</button>
     </div>
-    <div class="tap-label" id="start-tap">タップでラン開始</div>
+    <div class="tap-label" id="start-tap">タップでかましたれ</div>
     <a id="back-portal" href="/">← ゲームせんたくに戻る</a>
   </div>
 
   <div id="over-overlay" class="overlay hidden">
-    <h2 id="over-head">ここでビートが止まる…</h2>
+    <h2 id="over-head">MIC DROP…</h2>
     <p id="over-reason"></p>
     <div class="rank-title-wrap">
       <span class="rank-eyebrow">キミの称号</span>
@@ -60,12 +60,12 @@
       <button id="show-rank-over" class="rank-btn">ランキングを見る</button>
       <button id="back-title" class="rank-btn">タイトルへ</button>
     </div>
-    <div class="tap-label" id="over-tap">タップで再挑戦</div>
+    <div class="tap-label" id="over-tap">タップでリベンジ</div>
   </div>
 
   <div id="rank-overlay" class="overlay hidden">
     <h2 class="rank-heading">👑 天下ランキング</h2>
-    <p class="rank-sub">最も遠くまで駆け上がった者たち TOP10</p>
+    <p class="rank-sub">夜の街を制した者たち TOP10</p>
     <ol id="rank-list"></ol>
     <div class="tap-label">タップで閉じる</div>
   </div>
