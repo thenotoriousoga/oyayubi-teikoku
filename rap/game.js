@@ -1135,7 +1135,8 @@ function update(dt) {
   distance += ds;
 
   // タイマー類
-  if (fever > 0) fever -= dt;
+  // フィーバーはチルのスローモーション(0.6倍)に合わせて消費 — 同時取得でも損しない
+  if (fever > 0) fever -= dt * (chill > 0 ? 0.6 : 1);
   if (chill > 0) {
     chill -= dt;
     if (chill <= 0) beatNextT = 0; // テンポ復帰で再同期
