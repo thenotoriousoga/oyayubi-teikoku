@@ -77,7 +77,7 @@ function speedNow() {
 function scoreLabel(n) { return n.toLocaleString('ja-JP'); }
 
 function rankTitle(sc) {
-  if (sc >= 6000) return '👑 天下人';
+  if (sc >= 6000) return '👑 KING OF DA CITY';
   if (sc >= 3000) return 'シーンの顔';
   if (sc >= 1500) return 'ストリートの伝説';
   if (sc >= 800) return 'クラブの主';
@@ -523,20 +523,21 @@ function makeBackPrintTexture(hoodieColor) {
   g.fillStyle = '#' + hoodieColor.toString(16).padStart(6, '0');
   g.fillRect(0, 0, 128, 128);
   g.save();
-  g.translate(64, 60);
+  g.translate(64, 52);
   g.rotate(-0.08);
-  g.font = '900 46px "M PLUS 1p", sans-serif';
+  g.font = '900 34px "Archivo Black", sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.shadowColor = 'rgba(0,0,0,0.8)';
-  g.shadowOffsetX = 4; g.shadowOffsetY = 4;
+  g.shadowOffsetX = 3; g.shadowOffsetY = 3;
   g.fillStyle = '#f2b90c';
-  g.fillText('天下', 0, 0);
+  g.fillText('RUN DA', 0, -18);
+  g.fillText('CITY', 0, 20);
   g.restore();
-  g.font = '900 17px "Archivo Black", sans-serif';
+  g.font = '900 15px "Archivo Black", sans-serif';
   g.textAlign = 'center';
   g.fillStyle = '#f2b90c';
-  g.fillText('TENKA RUN', 64, 102);
+  g.fillText('★ RDC ★', 64, 108);
   return new THREE.CanvasTexture(c);
 }
 
