@@ -41,6 +41,11 @@ const FEVER_MS = 5000;
 const CHILL_MS = 5000;
 const SCORE_CAP = 9_999_999;
 
+// 開発用: ?safe=1 で障害物なし、?battleAt=60 でバトル開始距離を変更
+const DEBUG_PARAMS = new URLSearchParams(location.search);
+const DEBUG_SAFE = DEBUG_PARAMS.get('safe') === '1';
+const BATTLE_FIRST_AT = Number(DEBUG_PARAMS.get('battleAt')) || 500;
+
 // ===== ゲーム状態 =====
 let state = STATE.TITLE;
 let distance = 0;            // 走行距離 (m)
@@ -51,11 +56,30 @@ let fever = 0;               // 残りms
 let chill = 0;               // 残りms
 let hasGal = false;
 let invuln = 0;              // 被弾後の無敵ms
+let chase = 0;               // ポリス追跡の残りms (追跡中に転ぶと御用)
 let deadTimer = 0;
 let overAt = 0;              // OVER表示時刻 (連打誤爆防止)
 let hintTimer = 0;
 let best = 0;
 try { best = parseInt(localStorage.getItem('rap_best') || '0', 10) || 0; } catch (e) {}
+
+// ===== 地区 (距離で街並み・空気・コード進行が変わる) =====
+const DISTRICTS = [
+  { at: 0,    name: 'NEON STREET', fog: 0x0c0c1a, tint: 0xffffff, neon: 0.34, bh: [7, 24],
+    chords: { 0: [220.00, 261.63, 329.63], 8: [174.61, 261.63, 349.23] } }, // Am / F
+  { at: 600,  name: 'DA HIGHWAY',  fog: 0x0e141c, tint: 0x9fc6d8, neon: 0.12, bh: [4, 9],
+    chords: { 0: [164.81, 196.00, 246.94], 8: [130.81, 164.81, 196.00] } }, // Em / C
+  { at: 1400, name: 'DOWNTOWN',    fog: 0x160c20, tint: 0xd8a8f0, neon: 0.5, bh: [6, 14],
+    chords: { 0: [146.83, 174.61, 220.00], 8: [116.54, 146.83, 174.61] } }, // Dm / B♭
+  { at: 2400, name: 'SKYLINE',     fog: 0x1a1226, tint: 0xffe0a0, neon: 0.6, bh: [14, 34],
+    chords: { 0: [220.00, 261.63, 329.63], 8: [196.00, 246.94, 293.66] } }, // Am / G
+];
+let districtIdx = 0;
+function districtOf(d) {
+  let i = 0;
+  for (let k = 0; k < DISTRICTS.length; k++) if (d >= DISTRICTS[k].at) i = k;
+  return i;
+}
 
 const player = { lane: 0, x: 0, y: 0, vy: 0, sliding: 0, jumping: false };
 let entities = [];           // {kind:'ob'|'item', type, lane, z, mesh, dead, vy, spin}
@@ -104,6 +128,7 @@ const DEATH_REASONS = {
   hater: '😤 ヘイターに絡まれた',
   trash: '🗑 ゴミ缶にすっ転んだ',
   sign: '🪧 看板に頭をぶつけた',
+  police: '🚔 逃げ切れずポリスに御用',
 };
 
 // ===== サウンド (pk/game.js から移植) =====
@@ -197,10 +222,8 @@ const BEAT_STEP = 60 / 80 / 4;
 let beatNextT = 0;
 let beatStep = 0;
 
-const PIANO_STEPS = {
-  0: [220.00, 261.63, 329.63], // Am
-  8: [174.61, 261.63, 349.23], // F
-};
+// コード進行は地区ごとに変わる (DISTRICTS[districtIdx].chords を参照)
+const DEFAULT_CHORDS = DISTRICTS[0].chords;
 const BELL_STEPS = { 4: 880.00, 12: 1046.50 };
 const KICK_STEPS = { 0: 55.00, 3: 48.99, 4: null, 11: 58.27 };
 
@@ -227,7 +250,8 @@ function playBeatStep(step, t) {
   if (measure === 7 && s === 8) playRiser(t, sd * 4);
   if (s === 7) playChant(t + sd / 2);
 
-  if (PIANO_STEPS[s]) PIANO_STEPS[s].forEach((f) => playPiano(f, t, chill > 0 ? 0.055 : 0.04));
+  const chords = DISTRICTS[districtIdx]?.chords || DEFAULT_CHORDS;
+  if (chords[s]) chords[s].forEach((f) => playPiano(f, t, chill > 0 ? 0.055 : 0.04));
   if (BELL_STEPS[s]) playBell(BELL_STEPS[s], t);
 
   if (s in KICK_STEPS) {
@@ -303,6 +327,14 @@ function playGalGet() {
 function playGalScream() {
   if (!AC) return;
   tone(AC.currentTime, { type: 'sawtooth', freq: 1800, slideTo: 700, slideDur: 0.25, vol: 0.08, dur: 0.3 });
+}
+function playSiren() {
+  if (!AC) return;
+  const t = AC.currentTime;
+  for (let i = 0; i < 3; i++) {
+    tone(t + i * 0.5, { type: 'triangle', freq: 660, slideTo: 880, slideDur: 0.24, vol: 0.06, dur: 0.25 });
+    tone(t + i * 0.5 + 0.25, { type: 'triangle', freq: 880, slideTo: 660, slideDur: 0.24, vol: 0.06, dur: 0.25 });
+  }
 }
 function playCrash() {
   if (!AC) return;
@@ -498,14 +530,16 @@ for (const side of [-1, 1]) {
   }
 }
 function styleBuilding(bd) {
+  const dist = DISTRICTS[districtIdx];
   const w = 4 + Math.random() * 5;
-  const h = 7 + Math.random() * 17;
+  const h = dist.bh[0] + Math.random() * (dist.bh[1] - dist.bh[0]);
   const d = 4 + Math.random() * 4;
   bd.mesh.scale.set(w, h, d);
+  bd.mesh.material.color.setHex(dist.tint);
   bd.x = bd.side * (LANE_W * 1.5 + 4.5 + Math.random() * 5 + w / 2);
   bd.h = h;
-  // ネオン看板は3割の棟に。道路側の面に貼る
-  bd.sign.visible = Math.random() < 0.34;
+  // ネオン看板の密度は地区で変わる。道路側の面に貼る
+  bd.sign.visible = Math.random() < dist.neon;
   if (bd.sign.visible) {
     bd.sign.material = neonMats[Math.floor(Math.random() * neonMats.length)];
     bd.sign.position.set(-bd.side * 0.51, 0.1 + Math.random() * 0.25, 0);
@@ -700,6 +734,23 @@ gal.group.visible = false;
 scene.add(gal.group);
 let galX = 0;
 
+// ポリス: 転んだあと一定時間追いかけてくる。追跡中にもう一度転ぶと御用
+const cop = makeHumanoid({ hoodie: 0x1a3a8a, skin: 0xd9a066, cap: true, capColor: 0x14244a, chain: false });
+{
+  // 帽章とパトランプ風の点滅ライトバー
+  const badge = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0xf2b90c, emissive: 0x554000 }));
+  badge.scale.set(0.1, 0.1, 0.04);
+  badge.position.set(0, 1.95, -0.24);
+  cop.group.add(badge);
+}
+cop.group.visible = false;
+scene.add(cop.group);
+const copLight = new THREE.PointLight(0xff2233, 0, 18);
+copLight.position.set(0, 3, 3);
+scene.add(copLight);
+let copX = 0;
+let lastSirenT = 0;
+
 // --- 障害物メッシュ ---
 function makeBarricade() {
   const g = new THREE.Group();
@@ -865,6 +916,193 @@ function releaseMesh(type, mesh) {
   }
 }
 
+// ===== ラップバトル =====
+// 一定距離ごとにライバルが乱入。1小節アナウンス → 1小節相手のヴァース →
+// 1小節プレイヤーの番: ビートの4拍にリングが閉じる瞬間タップで判定
+let battle = null;
+let nextBattleAt = BATTLE_FIRST_AT;
+const rival = makeHumanoid({ hoodie: 0xb02030, skin: 0x8a5c34, cap: true, capColor: 0x5c1020, chain: true, mic: true });
+rival.micHand = true;
+rival.group.visible = false;
+scene.add(rival.group);
+let rivalX = 0;
+
+const battleUI = document.getElementById('battle-ui');
+const battleMsg = document.getElementById('battle-msg');
+const battleTargets = document.getElementById('battle-targets');
+
+function cancelBattle() {
+  if (!battle) return;
+  battle = null;
+  rival.group.visible = false;
+  battleUI.classList.add('hidden');
+  battleTargets.innerHTML = '';
+  nextBattleAt = distance + 400;
+}
+
+function startBattle() {
+  if (!AC) return; // 音が出ないとタイミングが取れない
+  const sd = stepDur();
+  // 次の小節頭に合わせて進行を組む
+  const stepsToBar = 16 - (beatStep % 16);
+  const barStart = beatNextT + stepsToBar * sd;
+  const rivalStart = barStart + 16 * sd;
+  const playerStart = rivalStart + 16 * sd;
+  const targets = [0, 4, 8, 12].map((s) => ({ t: playerStart + s * sd, judged: false, el: null }));
+  battle = { phase: 'announce', rivalStart, playerStart, targets, hits: 0 };
+  const lane = player.lane >= 1 ? 0 : player.lane + 1;
+  rivalX = lane * LANE_W;
+  rival.group.visible = true;
+  showBanner('RAP BATTLE!!');
+  battleMsg.textContent = '🎤 ライバル乱入!ビートを聴け…';
+  battleUI.classList.remove('hidden');
+  // 相手のヴァース (だみ声風の低音) をスケジュール
+  [0, 2, 4, 7, 8, 11, 12, 14].forEach((s, i) => {
+    tone(rivalStart + s * sd, { type: 'sawtooth', freq: 120 + (i % 3) * 25, slideTo: 88, vol: 0.07, dur: sd * 0.8 });
+  });
+  playLaser(500, AC.currentTime, 0.03);
+}
+
+function updateBattle() {
+  if (!battle || !AC) return;
+  const now = AC.currentTime;
+  if (battle.phase === 'announce' && now >= battle.rivalStart) {
+    battle.phase = 'rival';
+    battleMsg.textContent = '🔥 相手のヴァース…よく聴け';
+  } else if (battle.phase === 'rival' && now >= battle.playerStart - 0.12) {
+    battle.phase = 'player';
+    battleMsg.textContent = '🎤 お前の番だ!リングが重なる瞬間にタップ!!';
+    battle.targets.forEach((tg) => {
+      const el = document.createElement('div');
+      el.className = 'b-target';
+      const ring = document.createElement('span');
+      ring.className = 'b-ring';
+      ring.style.animationDuration = `${Math.max(0.1, tg.t - now).toFixed(3)}s`;
+      el.appendChild(ring);
+      tg.el = el;
+      battleTargets.appendChild(el);
+    });
+  } else if (battle.phase === 'player') {
+    for (const tg of battle.targets) {
+      if (!tg.judged && now > tg.t + 0.28) {
+        tg.judged = true;
+        if (tg.el) tg.el.classList.add('miss');
+      }
+    }
+    if (now > battle.targets[3].t + 0.45) resolveBattle();
+  }
+}
+
+function resolveBattle() {
+  const win = battle.hits >= 3;
+  battleUI.classList.add('hidden');
+  battleTargets.innerHTML = '';
+  if (win) {
+    const val = 1500 * multNow();
+    collectPts += val;
+    swag = Math.min(100, swag + 50);
+    showBanner('YOU WIN!!');
+    popText(`🏆 バトル勝利! +${scoreLabel(val)}`);
+    playFever();
+    vibrate([40, 30, 80]);
+  } else {
+    swag = 0;
+    showBanner('BOOED…');
+    popText('😤「ダサすぎw」', 'warn');
+    playFail();
+  }
+  battle = null;
+  rival.group.visible = false;
+  nextBattleAt = distance + 650;
+}
+
+function battleTap() {
+  if (!battle || battle.phase !== 'player' || !AC) return;
+  const now = AC.currentTime;
+  let best = null, bestDt = Infinity;
+  for (const tg of battle.targets) {
+    if (tg.judged) continue;
+    const d = Math.abs(now - tg.t);
+    if (d < bestDt) { bestDt = d; best = tg; }
+  }
+  if (!best) return;
+  if (bestDt <= 0.13) {
+    best.judged = true;
+    battle.hits++;
+    if (best.el) best.el.classList.add('perfect');
+    popText('PERFECT!', 'nice');
+    swag = Math.min(100, swag + 8);
+    playBell(1567.98, now, 0.04);
+  } else if (bestDt <= 0.28) {
+    best.judged = true;
+    battle.hits++;
+    if (best.el) best.el.classList.add('good');
+    popText('GOOD!');
+    playCoin();
+  } else {
+    popText('はやい…', 'warn');
+    playTap();
+  }
+}
+
+// ===== ライバルの散り際マーカー (TOP10) =====
+let rivalMarkers = [];
+async function fetchMarkers() {
+  try {
+    const r = await fetch(`${API}?game=rap`);
+    if (!r.ok) return;
+    const data = await r.json();
+    rivalMarkers = (data.top || [])
+      .filter((e) => Number.isInteger(e.dist) && e.dist > 30)
+      .map((e) => ({ name: e.name, dist: e.dist, spawned: false }));
+    if (DEBUG_PARAMS.has('debug')) console.log('[markers]', JSON.stringify(rivalMarkers));
+  } catch (e) { /* オフラインなら無し */ }
+}
+
+function makeMarkerMesh(name) {
+  const g = new THREE.Group();
+  // 手向けの花
+  for (let i = 0; i < 3; i++) {
+    const stem = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0x2f7d3a }));
+    stem.scale.set(0.05, 0.3, 0.05);
+    stem.position.set((i - 1) * 0.12, 0.15, 0);
+    stem.rotation.z = (i - 1) * 0.3;
+    g.add(stem);
+    const bloom = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: [0xff5a8a, 0xffd24a, 0xffffff][i] }));
+    bloom.scale.set(0.14, 0.14, 0.14);
+    bloom.position.set((i - 1) * 0.22, 0.34, 0);
+    g.add(bloom);
+  }
+  // スプレー落書き
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 96;
+  const gg = c.getContext('2d');
+  gg.textAlign = 'center';
+  gg.shadowColor = 'rgba(0,0,0,0.9)';
+  gg.shadowBlur = 6;
+  gg.font = '900 30px "M PLUS 1p", sans-serif';
+  gg.fillStyle = '#f2b90c';
+  gg.fillText(`✝ ${name}`, 128, 36);
+  gg.font = '800 20px "M PLUS 1p", sans-serif';
+  gg.fillStyle = '#ffffff';
+  gg.fillText('ここで散った', 128, 70);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+  sp.scale.set(2.6, 1.0, 1);
+  sp.position.y = 1.2;
+  g.add(sp);
+  return g;
+}
+
+function spawnMarker(m) {
+  if (DEBUG_PARAMS.has('debug')) console.log('[spawnMarker]', m.name, m.dist, 'at dist', Math.floor(distance));
+  const mesh = makeMarkerMesh(m.name);
+  const side = Math.random() < 0.5 ? -1 : 1;
+  const z = m.dist - distance;
+  mesh.position.set(side * 4.0, 0.32, -z); // 歩道の上に置く
+  scene.add(mesh);
+  entities.push({ kind: 'marker', type: 'marker', name: m.name, lane: 99, z, mesh, dead: false });
+}
+
 // ===== スポナー =====
 // b=バリケード(ジャンプ可) h=ヘイター t=ゴミ缶(ジャンプ) s=看板(スライド) n=なし
 // どの行も「空きレーン or ジャンプ/スライドで抜けられるレーン」を必ず含む。
@@ -964,6 +1202,10 @@ function beginGame() {
   chill = 0;
   hasGal = false;
   invuln = 0;
+  chase = 0;
+  cop.group.visible = false;
+  copLight.intensity = 0;
+  copX = 0;
   player.lane = 0; player.x = 0; player.y = 0; player.vy = 0;
   player.sliding = 0; player.jumping = false;
   rapper.group.rotation.x = 0;
@@ -975,6 +1217,15 @@ function beginGame() {
   spawnedUntil = 40;
   rowsSpawned = 0;
   swagMaxShown = false;
+  districtIdx = 0;
+  cancelBattle();
+  nextBattleAt = BATTLE_FIRST_AT;
+  for (const m of rivalMarkers) m.spawned = false;
+  fetchMarkers();
+  for (const b of buildings) {
+    styleBuilding(b);
+    b.mesh.position.set(b.x, b.h / 2, -b.z);
+  }
   startOverlay.classList.add('hidden');
   overOverlay.classList.add('hidden');
   rankOverlay.classList.add('hidden');
@@ -986,6 +1237,7 @@ function beginGame() {
 
 function goTitle() {
   state = STATE.TITLE;
+  cancelBattle();
   overOverlay.classList.add('hidden');
   rankOverlay.classList.add('hidden');
   tintEl.className = '';
@@ -1081,7 +1333,22 @@ function hitObstacle(ob) {
     vibrate(60);
     return;
   }
-  die(ob.type);
+  if (chase > 0) {
+    // 追跡中にもう一度転んだら御用
+    die('police');
+    return;
+  }
+  // 1回目は転ぶだけで済むが、ポリスが追ってくる
+  chase = 8000;
+  invuln = 1400;
+  ob.dead = true;
+  ob.vy = 7;
+  ob.spin = 4;
+  cancelBattle();
+  popText('🚔 ポリスだ!転ぶな!逃げろ!', 'warn');
+  showBanner('RUN!!');
+  playSiren();
+  vibrate([60, 40, 60]);
 }
 
 function die(reason) {
@@ -1090,6 +1357,10 @@ function die(reason) {
   swag = 0;
   fever = 0;
   chill = 0;
+  chase = 0;
+  cop.group.visible = false;
+  copLight.intensity = 0;
+  cancelBattle();
   tintEl.className = '';
   overReasonEl.textContent = DEATH_REASONS[reason] || '路上に散った';
   playCrash();
@@ -1113,7 +1384,7 @@ function endGame() {
   top10Badge.classList.add('hidden');
   overOverlay.classList.remove('hidden');
   updateHUD();
-  autoSubmitScore(sc);
+  autoSubmitScore(sc, Math.floor(distance));
 }
 
 // ===== 更新 =====
@@ -1142,6 +1413,16 @@ function update(dt) {
     if (chill <= 0) beatNextT = 0; // テンポ復帰で再同期
   }
   if (invuln > 0) invuln -= dt;
+  if (chase > 0) {
+    chase -= dt * (chill > 0 ? 0.6 : 1);
+    if (chase <= 0) {
+      popText('🚔 まいたぜ!', 'nice');
+      swag = Math.min(100, swag + 15);
+    } else if (AC && AC.currentTime - lastSirenT > 1.8) {
+      lastSirenT = AC.currentTime;
+      playSiren();
+    }
+  }
   if (hintTimer > 0) {
     hintTimer -= dt;
     if (hintTimer <= 0) hintEl.classList.remove('show');
@@ -1156,10 +1437,19 @@ function update(dt) {
   }
   if (swag < 80) swagMaxShown = false;
 
+  // 地区の切り替わり
+  const di = districtOf(distance);
+  if (di !== districtIdx) {
+    districtIdx = di;
+    showBanner(DISTRICTS[di].name);
+    popText(`📍 ${DISTRICTS[di].name} に突入!`);
+    if (AC) playRiser(AC.currentTime, 0.6, 0.06);
+  }
+
   // 画面エフェクト
   const wantTint = fever > 0 ? 'fever' : chill > 0 ? 'chill' : '';
   if (tintEl.className !== wantTint) tintEl.className = wantTint;
-  scene.fog.color.setHex(fever > 0 ? 0x2a1f08 : chill > 0 ? 0x1a0c2e : NIGHT);
+  scene.fog.color.setHex(fever > 0 ? 0x2a1f08 : chill > 0 ? 0x1a0c2e : DISTRICTS[districtIdx].fog);
   scene.background.copy(scene.fog.color);
 
   // プレイヤー移動
@@ -1175,11 +1465,23 @@ function update(dt) {
   }
   if (player.sliding > 0) player.sliding -= dt;
 
-  // ワールドを流す + スポーン
+  // ラップバトル
+  if (!battle && chase <= 0 && distance > nextBattleAt) startBattle();
+  updateBattle();
+
+  // ワールドを流す + スポーン (バトル中は障害物を出さない)
   spawnedUntil -= ds;
   while (spawnedUntil < DRAW_DIST) {
     spawnedUntil += rowGap();
-    spawnRow(spawnedUntil);
+    if (!battle && !DEBUG_SAFE) spawnRow(spawnedUntil);
+  }
+
+  // TOP10の散り際マーカー
+  for (const m of rivalMarkers) {
+    if (!m.spawned && m.dist - distance < DRAW_DIST && m.dist - distance > 5) {
+      m.spawned = true;
+      spawnMarker(m);
+    }
   }
 
   for (const b of buildings) {
@@ -1238,6 +1540,17 @@ function update(dt) {
       }
     }
 
+    // ライバルの散り際を越えた瞬間
+    if (e.kind === 'marker' && !e.passed && e.z < 0) {
+      e.passed = true;
+      if (e.name !== savedName) {
+        swag = Math.min(100, swag + 5);
+        popText(`⚰ ${e.name} を越えた!`, 'nice');
+      } else {
+        popText('⚰ 前回のお前を越えた!', 'nice');
+      }
+    }
+
     // ニアミス判定 (立ち障害物が真横を通過)
     if (e.kind === 'ob' && !e.passed && e.z < 0) {
       e.passed = true;
@@ -1257,7 +1570,18 @@ function update(dt) {
   // 後方へ抜けたエンティティを回収
   entities = entities.filter((e) => {
     if (e.z < -6 || (e.dead && e.kind === 'ob' && e.mesh.position.y < -3) || (e.dead && e.kind === 'item')) {
-      releaseMesh(e.type, e.mesh);
+      if (e.kind === 'marker') {
+        // マーカーは都度生成なので破棄する
+        scene.remove(e.mesh);
+        e.mesh.traverse((o) => {
+          if (o.material) {
+            if (o.material.map) o.material.map.dispose();
+            o.material.dispose();
+          }
+        });
+      } else {
+        releaseMesh(e.type, e.mesh);
+      }
       return false;
     }
     return true;
@@ -1321,9 +1645,30 @@ function loop(t) {
     rapper.group.visible = invuln > 0 ? Math.floor(t / 90) % 2 === 0 : true;
     if (gal.group.visible) {
       galX += (px - galX) * Math.min(1, dt / 220);
-      gal.group.position.z = 1.6;
       poseRunner(gal, phase + 1.7, 0, 0, galX);
       gal.group.position.z = 1.6;
+    }
+    // バトル中のライバル: 隣レーンを並走、自分のヴァース中はノリノリ
+    if (battle) {
+      const rphase = battle.phase === 'rival' ? phase * 1.35 : phase + 0.5;
+      poseRunner(rival, rphase, battle.phase === 'rival' ? Math.abs(Math.sin(t * 0.008)) * 0.25 : 0, 0, rivalX);
+      rival.group.position.z = -0.9;
+    }
+    // ポリス: 追跡中は真後ろに迫り、終わり際は追いつけず消える
+    const chasing = chase > 0 && state === STATE.RUN;
+    cop.group.visible = chasing;
+    if (chasing) {
+      // プレイヤーを隠さないよう斜め後ろから追う
+      const copTarget = px + (px >= 0 ? -1.15 : 1.15);
+      copX += (copTarget - copX) * Math.min(1, dt / 320);
+      poseRunner(cop, phase + 0.8, 0, 0, copX);
+      const fade = Math.min(1, chase / 1500); // 残り1.5秒で後方へ離脱
+      cop.group.position.z = 3.3 + (1 - fade) * 7;
+      copLight.position.set(copX, 3.2, cop.group.position.z + 0.5);
+      copLight.intensity = 1.6 + Math.sin(t * 0.03) * 0.6;
+      copLight.color.setHex(Math.floor(t / 160) % 2 === 0 ? 0xff2233 : 0x2244ff);
+    } else {
+      copLight.intensity = 0;
     }
   }
 
@@ -1351,6 +1696,7 @@ function updateHUD() {
   if (fever > 0) fx += `<span class="fx-chip">🎤 ${(fever / 1000).toFixed(1)}s</span>`;
   if (chill > 0) fx += `<span class="fx-chip chill">🍃 ${(chill / 1000).toFixed(1)}s</span>`;
   if (hasGal) fx += `<span class="fx-chip">💁‍♀️ 身代わり</span>`;
+  if (chase > 0) fx += `<span class="fx-chip police">🚔 ${(chase / 1000).toFixed(1)}s</span>`;
   fxHud.innerHTML = fx;
 }
 
@@ -1358,6 +1704,12 @@ function updateHUD() {
 let pDown = null;
 window.addEventListener('pointerdown', (e) => {
   ensureAudio();
+  // バトルの回答フェーズ中はタップ=リズム入力
+  if (state === STATE.RUN && battle && battle.phase === 'player') {
+    battleTap();
+    pDown = null;
+    return;
+  }
   pDown = { x: e.clientX, y: e.clientY };
 });
 window.addEventListener('pointerup', (e) => {
@@ -1366,6 +1718,7 @@ window.addEventListener('pointerup', (e) => {
   const dy = e.clientY - pDown.y;
   pDown = null;
   if (state !== STATE.RUN) return;
+  if (battle && battle.phase === 'player') return;
   const SWIPE_MIN = 24;
   if (Math.max(Math.abs(dx), Math.abs(dy)) < SWIPE_MIN) return;
   if (Math.abs(dx) > Math.abs(dy)) {
@@ -1383,6 +1736,10 @@ window.addEventListener('keydown', (e) => {
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) {
     e.preventDefault();
     ensureAudio();
+  }
+  if (state === STATE.RUN && battle && battle.phase === 'player') {
+    if (e.key === ' ' || e.key === 'ArrowUp') battleTap();
+    return;
   }
   if (e.key === 'ArrowLeft') setLane(-1);
   else if (e.key === 'ArrowRight') setLane(1);
@@ -1419,13 +1776,13 @@ try {
 } catch (e) {}
 nameInput.value = savedName;
 
-async function autoSubmitScore(score) {
+async function autoSubmitScore(score, dist) {
   if (score < 1 || !savedName) return;
   try {
     const r = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ game: 'rap', name: savedName, score }),
+      body: JSON.stringify({ game: 'rap', name: savedName, score, dist }),
     });
     if (!r.ok) return;
     const data = await r.json();
