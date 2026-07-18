@@ -96,8 +96,8 @@ const DISTRICTS = [
     road: 'city',    ground: 0x0a0a12, tex: 'dark',    props: 'ug',        story: 'まずは小箱を沸かす' },
   { at: 2200, ch: 5, name: 'ネオン街',          beat: 'trap',    fog: 0x0c0c1a, tint: 0xffffff, neon: 0.6,  bh: [7, 24],
     road: 'city',    ground: 0x0a0a12, tex: 'city',    props: 'none',      story: '俺の名前、もう聞こえてるだろ' },
-  { at: 3000, ch: 6, name: 'テッペン',          beat: 'party',   fog: 0x1a1226, tint: 0xffe0a0, neon: 0.8,  bh: [14, 34],
-    road: 'city',    ground: 0x0a0a12, tex: 'glass',   props: 'stage',     story: 'ここが天下だ。母ちゃん見てるか' },
+  { at: 3000, ch: 6, name: 'テッペン',          beat: 'party',   fog: 0x14081a, tint: 0xffe0a0, neon: 0.8,  bh: [14, 34],
+    road: 'stage',   ground: 0x08040c, tex: 'glass',   props: 'stage',     story: 'ここが天下だ。母ちゃん見てるか' },
 ];
 let districtIdx = 0;
 function districtOf(d) {
@@ -606,6 +606,25 @@ function makeRoadTexture(style) {
       g.fillRect(Math.random() * 16, Math.random() * 256, 3, 3);
       g.fillRect(240 + Math.random() * 16, Math.random() * 256, 3, 3);
     }
+  } else if (style === 'stage') {
+    // レッドカーペットの花道
+    g.fillStyle = '#5c0e1e';
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 260; i++) {
+      g.fillStyle = Math.random() < 0.5 ? '#6a1226' : '#4c0a18';
+      g.fillRect(Math.random() * 256, Math.random() * 256, 2.5, 2.5);
+    }
+    // レーンの目印 (控えめな白)
+    g.fillStyle = 'rgba(255,255,255,0.4)';
+    for (const x of [laneX, laneX * 2]) {
+      g.fillRect(x - 3, 24, 6, 80);
+    }
+    // 金の縁取り (二重)
+    g.fillStyle = '#f2b90c';
+    g.fillRect(0, 0, 8, 256);
+    g.fillRect(248, 0, 8, 256);
+    g.fillRect(14, 0, 3, 256);
+    g.fillRect(239, 0, 3, 256);
   } else {
     // アスファルト系
     g.fillStyle = style === 'old' ? '#1c1c22' : '#191922';
@@ -650,6 +669,7 @@ const ROAD_TEXES = {
   old: makeRoadTexture('old'),
   kokudou: makeRoadTexture('kokudou'),
   city: makeRoadTexture('city'),
+  stage: makeRoadTexture('stage'),
 };
 let roadTex = ROAD_TEXES.dirt;
 const road = new THREE.Mesh(
@@ -739,6 +759,7 @@ ground.position.y = -0.02;
 scene.add(ground);
 
 // --- 星と月 ---
+let moonSprite = null;
 {
   const starGeo = new THREE.BufferGeometry();
   const pos = [];
@@ -760,10 +781,10 @@ scene.add(ground);
   grad.addColorStop(1, 'rgba(255,244,200,0)');
   mg.fillStyle = grad;
   mg.fillRect(0, 0, 128, 128);
-  const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(moonC), fog: false, transparent: true }));
-  moon.scale.set(26, 26, 1);
-  moon.position.set(-34, 44, -110);
-  scene.add(moon);
+  moonSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(moonC), fog: false, transparent: true }));
+  moonSprite.scale.set(26, 26, 1);
+  moonSprite.position.set(-34, 44, -110);
+  scene.add(moonSprite);
 }
 
 // --- ネオンビル群 (左右プール、通過したら前方に回して使い回す) ---
@@ -892,6 +913,7 @@ for (const side of [-1, 1]) {
 }
 function styleBuilding(bd) {
   const dist = DISTRICTS[districtIdx];
+  bd.mesh.visible = dist.props !== 'stage'; // 会場ではビルなし
   const w = 4 + Math.random() * 5;
   const h = dist.bh[0] + Math.random() * (dist.bh[1] - dist.bh[0]);
   const d = 4 + Math.random() * 4;
@@ -915,6 +937,91 @@ function styleBuilding(bd) {
     else bd.sign.scale.set(0.9, 0.3, 1);
   }
 }
+
+// --- テッペンのライブ会場セット (ミラーボール + 照明トラス + ベルベットカーテン) ---
+const venue = { group: new THREE.Group(), mirror: null, spots: [] };
+{
+  // ミラーボール
+  const mc = document.createElement('canvas');
+  mc.width = 64; mc.height = 64;
+  const mg = mc.getContext('2d');
+  for (let y = 0; y < 64; y += 8) {
+    for (let x = 0; x < 64; x += 8) {
+      const v = 150 + Math.random() * 105;
+      mg.fillStyle = `rgb(${v},${v},${v + 20})`;
+      mg.fillRect(x + 1, y + 1, 6, 6);
+    }
+  }
+  const mirror = new THREE.Mesh(
+    new THREE.SphereGeometry(2.0, 18, 14),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(mc) })
+  );
+  mirror.position.set(0, 10.5, -30);
+  venue.mirror = mirror;
+  venue.group.add(mirror);
+  // 吊りワイヤー
+  const wire = new THREE.Mesh(boxGeoSafe(), new THREE.MeshBasicMaterial({ color: 0x444450 }));
+  wire.scale.set(0.06, 8, 0.06);
+  wire.position.set(0, 16.5, -30);
+  venue.group.add(wire);
+  // ミラーボールの照り返し
+  const mLight = new THREE.PointLight(0xffffff, 1.2, 30);
+  mLight.position.set(0, 9, -28);
+  venue.group.add(mLight);
+
+  // 照明トラス (3本) + カラースポット
+  const trussMat = new THREE.MeshLambertMaterial({ color: 0x22222c });
+  for (const tz of [-14, -42, -68]) {
+    const beam = new THREE.Mesh(boxGeoSafe(), trussMat);
+    beam.scale.set(15, 0.35, 0.35);
+    beam.position.set(0, 8.2, tz);
+    venue.group.add(beam);
+    for (const px of [-5.5, -2, 2, 5.5]) {
+      const post = new THREE.Mesh(boxGeoSafe(), trussMat);
+      post.scale.set(0.28, 0.5, 0.28);
+      post.position.set(px, 7.85, tz);
+      venue.group.add(post);
+      const spot = new THREE.Mesh(
+        new THREE.ConeGeometry(1.5, 9, 8, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.14, depthWrite: false, side: THREE.DoubleSide })
+      );
+      spot.position.set(px, 3.6, tz);
+      venue.group.add(spot);
+      venue.spots.push(spot);
+    }
+  }
+
+  // ベルベットカーテンの壁 (ビルの代わりに会場を囲う)
+  const cc = document.createElement('canvas');
+  cc.width = 256; cc.height = 128;
+  const cg = cc.getContext('2d');
+  for (let x = 0; x < 256; x += 16) {
+    const grad = cg.createLinearGradient(x, 0, x + 16, 0);
+    grad.addColorStop(0, '#3a0812');
+    grad.addColorStop(0.5, '#5c1020');
+    grad.addColorStop(1, '#2a060e');
+    cg.fillStyle = grad;
+    cg.fillRect(x, 0, 16, 128);
+  }
+  // 金のトリム
+  cg.fillStyle = '#f2b90c';
+  cg.fillRect(0, 0, 256, 6);
+  const curtainTex = new THREE.CanvasTexture(cc);
+  curtainTex.wrapS = THREE.RepeatWrapping;
+  curtainTex.repeat.set(ROAD_LEN / 16, 1);
+  for (const side of [-1, 1]) {
+    const curtain = new THREE.Mesh(
+      new THREE.PlaneGeometry(ROAD_LEN, 13),
+      new THREE.MeshBasicMaterial({ map: curtainTex })
+    );
+    curtain.position.set(side * 9.5, 6.5, -ROAD_LEN / 2 + 12);
+    curtain.rotation.y = side * -Math.PI / 2;
+    venue.group.add(curtain);
+  }
+  venue.group.visible = false;
+  scene.add(venue.group);
+}
+function boxGeoSafe() { return new THREE.BoxGeometry(1, 1, 1); }
 
 // --- テッペンのライブ演出 (サーチライト + 紙吹雪) ---
 const searchlights = [];
@@ -1177,11 +1284,14 @@ const P_SPACING = 8;
       trash.scale.set(0.7, 0.55, 0.7);
       trash.position.y = 0.27;
       parts.trash = [trash];
-      // 観客の列 (テッペン)
+      // 観客の列 (テッペン): ひな壇2段
       const crowd = new THREE.Mesh(boxGeo, crowdMats[i % crowdMats.length]);
       crowd.scale.set(5.5, 1.4, 1.2);
       crowd.position.y = 0.7;
-      parts.crowd = [crowd];
+      const crowd2 = new THREE.Mesh(boxGeo, crowdMats[(i + 1) % crowdMats.length]);
+      crowd2.scale.set(5.5, 1.4, 1.2);
+      crowd2.position.set(side * 1.3, 1.5, 0);
+      parts.crowd = [crowd, crowd2];
       // スピーカースタック (テッペン)
       const spk1 = new THREE.Mesh(boxGeo, speakerMat);
       spk1.scale.set(1.1, 1.5, 1.0);
@@ -1256,6 +1366,12 @@ function applyDistrictScenery(d) {
   const isStage = d.props === 'stage';
   for (const b of searchlights) b.visible = isStage;
   confetti.points.visible = isStage;
+  // テッペンは町ではなくライブ会場: ビルと月を消して会場セットを出す
+  venue.group.visible = isStage;
+  for (const b of buildings) {
+    b.mesh.visible = !isStage;
+  }
+  if (moonSprite) moonSprite.visible = !isStage;
 }
 
 // 章に入る: バナー + セリフ + ビート切替 + 風景切替
@@ -2677,7 +2793,7 @@ function loop(t) {
     }
   }
 
-  // テッペンのライブ演出 (サーチライトの揺れ + 紙吹雪)
+  // テッペンのライブ演出 (サーチライト + 紙吹雪 + ミラーボール + スポットライト)
   if (searchlights[0].visible) {
     for (let i = 0; i < searchlights.length; i++) {
       searchlights[i].rotation.z = Math.sin(t * 0.0006 + i * 1.7) * 0.45;
@@ -2688,6 +2804,11 @@ function loop(t) {
       if (cp[i * 3 + 1] < 0.2) cp[i * 3 + 1] += 16;
     }
     confetti.points.geometry.attributes.position.needsUpdate = true;
+    venue.mirror.rotation.y = t * 0.0012;
+    for (let i = 0; i < venue.spots.length; i++) {
+      venue.spots[i].material.color.setHSL((t * 0.00012 + i * 0.23) % 1, 0.95, 0.6);
+      venue.spots[i].rotation.z = Math.sin(t * 0.001 + i) * 0.18;
+    }
   }
 
   // カメラ
