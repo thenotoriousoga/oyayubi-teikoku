@@ -60,6 +60,30 @@ html, body {
   background: radial-gradient(ellipse at center, rgba(123, 47, 247, 0.08) 30%, rgba(90, 20, 160, 0.35) 100%);
 }
 
+#tint.alley {
+  opacity: 1;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(40, 220, 120, 0.22) 100%);
+}
+
+/* 裏ルート突入時のフラッシュ */
+#flash {
+  position: fixed;
+  inset: 0;
+  background: #eafff2;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 7;
+}
+
+#flash.pop {
+  animation: flash-pop 0.4s ease-out forwards;
+}
+
+@keyframes flash-pop {
+  0%   { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
 /* ===== スコアポップ ===== */
 .pop-text {
   position: fixed;

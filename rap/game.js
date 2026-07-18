@@ -14,6 +14,7 @@ const swagBar = document.getElementById('swag-bar');
 const tintEl = document.getElementById('tint');
 const bannerEl = document.getElementById('banner');
 const storyEl = document.getElementById('story-line');
+const flashEl = document.getElementById('flash');
 const hintEl = document.getElementById('hint');
 const startOverlay = document.getElementById('start-overlay');
 const startTapEl = document.getElementById('start-tap');
@@ -95,8 +96,8 @@ const DISTRICTS = [
     road: 'city',    ground: 0x0a0a12, tex: 'dark',    props: 'ug',        story: 'まずは小箱を沸かす' },
   { at: 2200, ch: 5, name: 'ネオン街',          beat: 'trap',    fog: 0x0c0c1a, tint: 0xffffff, neon: 0.6,  bh: [7, 24],
     road: 'city',    ground: 0x0a0a12, tex: 'city',    props: 'none',      story: '俺の名前、もう聞こえてるだろ' },
-  { at: 3000, ch: 6, name: 'テッペン',          beat: 'party',   fog: 0x1a1226, tint: 0xffe0a0, neon: 0.5,  bh: [14, 34],
-    road: 'city',    ground: 0x0a0a12, tex: 'glass',   props: 'none',      story: 'ここが天下だ。母ちゃん見てるか' },
+  { at: 3000, ch: 6, name: 'テッペン',          beat: 'party',   fog: 0x1a1226, tint: 0xffe0a0, neon: 0.8,  bh: [14, 34],
+    road: 'city',    ground: 0x0a0a12, tex: 'glass',   props: 'stage',     story: 'ここが天下だ。母ちゃん見てるか' },
 ];
 let districtIdx = 0;
 function districtOf(d) {
@@ -843,7 +844,34 @@ const ugSignMats = ['CLUB', 'BAR', 'MIC', '裏'].map((t, i) =>
   new THREE.MeshBasicMaterial({ map: makeNeonTexture(t, i % 2 === 0 ? '#ff4fd8' : '#b06aff') }));
 const goldSignMats = ['VIP', '天下', 'SOLD OUT'].map((t, i) =>
   new THREE.MeshBasicMaterial({ map: makeNeonTexture(t, i % 2 === 0 ? '#f2b90c' : '#ffffff') }));
-const SIGN_SETS = { default: neonMats, ug: ugSignMats, gold: goldSignMats };
+// テッペンの巨大LEDスクリーン
+function makeLedTexture(text, c1, c2) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 256, 128);
+  grad.addColorStop(0, c1);
+  grad.addColorStop(1, c2);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 256, 128);
+  // LEDのドット感
+  g.fillStyle = 'rgba(0,0,0,0.25)';
+  for (let y = 0; y < 128; y += 4) g.fillRect(0, y, 256, 1);
+  g.font = '900 44px "Archivo Black", "M PLUS 1p", sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillStyle = '#ffffff';
+  g.shadowColor = '#000';
+  g.shadowOffsetX = 3; g.shadowOffsetY = 3;
+  g.fillText(text, 128, 66);
+  return new THREE.CanvasTexture(c);
+}
+const ledMats = [
+  new THREE.MeshBasicMaterial({ map: makeLedTexture('RUN DA CITY', '#7b2ff7', '#ff4fd8') }),
+  new THREE.MeshBasicMaterial({ map: makeLedTexture('天下 FEST', '#f2b90c', '#ff5a2a') }),
+  new THREE.MeshBasicMaterial({ map: makeLedTexture('SOLD OUT', '#0c6cd8', '#4fd8ff') }),
+];
+const SIGN_SETS = { default: neonMats, ug: ugSignMats, gold: ledMats };
 const buildings = [];
 const B_COUNT = 15;       // 片側の棟数
 const B_SPACING = 11;
@@ -877,12 +905,112 @@ function styleBuilding(bd) {
   // ネオン看板の密度・種類は章で変わる。道路側の面に貼る
   bd.sign.visible = Math.random() < dist.neon;
   if (bd.sign.visible) {
-    const signSet = dist.props === 'ug' ? SIGN_SETS.ug : dist.tex === 'glass' ? SIGN_SETS.gold : SIGN_SETS.default;
+    const isGlass = dist.tex === 'glass';
+    const signSet = dist.props === 'ug' ? SIGN_SETS.ug : isGlass ? SIGN_SETS.gold : SIGN_SETS.default;
     bd.sign.material = signSet[Math.floor(Math.random() * signSet.length)];
     bd.sign.position.set(-bd.side * 0.51, 0.1 + Math.random() * 0.25, 0);
     bd.sign.rotation.y = -bd.side * Math.PI / 2;
-    bd.sign.scale.set(0.9 / 1, 0.3, 1);
+    // テッペンは巨大LEDスクリーン
+    if (isGlass) bd.sign.scale.set(1.4, 0.45, 1);
+    else bd.sign.scale.set(0.9, 0.3, 1);
   }
+}
+
+// --- テッペンのライブ演出 (サーチライト + 紙吹雪) ---
+const searchlights = [];
+{
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: 0xfff2c0, transparent: true, opacity: 0.10, depthWrite: false, fog: false,
+    side: THREE.DoubleSide,
+  });
+  for (const [x, z] of [[-9, -30], [9, -45], [-14, -70], [14, -60]]) {
+    const beam = new THREE.Mesh(new THREE.ConeGeometry(2.6, 42, 10, 1, true), beamMat);
+    beam.position.set(x, 21, z);
+    beam.rotation.x = 0; // 地面から空へ (コーンの頂点は上)
+    beam.scale.y = -1;   // 頂点を下 (地面側) に
+    beam.visible = false;
+    scene.add(beam);
+    searchlights.push(beam);
+  }
+}
+const confetti = { points: null, pos: null, count: 130 };
+{
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(confetti.count * 3);
+  const col = new Float32Array(confetti.count * 3);
+  const palette = [[1, 0.72, 0.05], [1, 0.31, 0.85], [0.31, 0.85, 1], [0.49, 1, 0.43], [1, 1, 1]];
+  for (let i = 0; i < confetti.count; i++) {
+    pos[i * 3] = (Math.random() * 2 - 1) * 9;
+    pos[i * 3 + 1] = 2 + Math.random() * 16;
+    pos[i * 3 + 2] = -Math.random() * 45 + 5;
+    const c = palette[i % palette.length];
+    col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  confetti.points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.22, vertexColors: true, transparent: true, opacity: 0.9 }));
+  confetti.points.visible = false;
+  confetti.pos = pos;
+  scene.add(confetti.points);
+}
+
+// --- 裏ルートのグラフィティトンネル ---
+function makeGraffitiTexture() {
+  const c = document.createElement('canvas');
+  c.width = 1024; c.height = 256;
+  const g = c.getContext('2d');
+  // コンクリ壁
+  g.fillStyle = '#1c1c22';
+  g.fillRect(0, 0, 1024, 256);
+  for (let i = 0; i < 500; i++) {
+    g.fillStyle = Math.random() < 0.5 ? '#222228' : '#16161c';
+    g.fillRect(Math.random() * 1024, Math.random() * 256, 4, 4);
+  }
+  const colors = ['#ff4fd8', '#4fd8ff', '#f2b90c', '#7dff6e', '#ff5a48', '#b06aff', '#ffffff'];
+  const words = ['RDC', 'YO!', '808', '天下', 'DOPE', 'FLOW', 'KING', 'WAVY', 'REAL', 'MIC'];
+  for (let i = 0; i < 14; i++) {
+    g.save();
+    const x = 40 + Math.random() * 950, y = 60 + Math.random() * 150;
+    g.translate(x, y);
+    g.rotate((Math.random() - 0.5) * 0.45);
+    const col = colors[Math.floor(Math.random() * colors.length)];
+    g.shadowColor = col;
+    g.shadowBlur = 9;
+    g.font = `900 ${42 + Math.random() * 34}px "Archivo Black", "M PLUS 1p", sans-serif`;
+    g.textAlign = 'center';
+    const w = words[Math.floor(Math.random() * words.length)];
+    g.strokeStyle = '#000';
+    g.lineWidth = 9;
+    g.strokeText(w, 0, 0);
+    g.fillStyle = col;
+    g.fillText(w, 0, 0);
+    // スプレーの垂れ
+    g.shadowBlur = 0;
+    for (let d = 0; d < 3; d++) {
+      g.fillRect(-30 + Math.random() * 60, 8, 4, 12 + Math.random() * 22);
+    }
+    g.restore();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.repeat.set(ROAD_LEN / 32, 1);
+  tex.anisotropy = 4;
+  return tex;
+}
+const alleyWalls = [];
+const alleyWallTexes = [];
+for (const side of [-1, 1]) {
+  const tex = makeGraffitiTexture();
+  const wall = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROAD_LEN, 5.5),
+    new THREE.MeshBasicMaterial({ map: tex })
+  );
+  wall.position.set(side * 4.6, 2.75, -ROAD_LEN / 2 + 12);
+  wall.rotation.y = side * -Math.PI / 2;
+  wall.visible = false;
+  scene.add(wall);
+  alleyWalls.push({ mesh: wall, side });
+  alleyWallTexes.push({ tex, side });
 }
 
 // --- 路肩の小道具プール (全アーキタイプを子に持ち visibility 切替で使い回す) ---
@@ -929,6 +1057,57 @@ const P_SPACING = 8;
     return new THREE.CanvasTexture(c);
   }
   const kmMats = [300, 150, 50].map((km) => new THREE.MeshBasicMaterial({ map: makeKmTexture(km) }));
+  // 観客 (シルエット + ペンライト)
+  function makeCrowdTexture() {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = '#101018';
+    g.fillRect(0, 0, 256, 64);
+    // 頭のシルエット
+    g.fillStyle = '#05050a';
+    for (let i = 0; i < 42; i++) {
+      const cx = i * 6.2 + Math.random() * 3;
+      const cy = 16 + Math.random() * 12;
+      g.beginPath();
+      g.arc(cx, cy, 4.5, 0, Math.PI * 2);
+      g.fill();
+      g.fillRect(cx - 4.5, cy, 9, 64 - cy);
+    }
+    // ペンライト
+    const penColors = ['#ff4fd8', '#4fd8ff', '#f2b90c', '#7dff6e', '#ffffff'];
+    for (let i = 0; i < 34; i++) {
+      const col = penColors[Math.floor(Math.random() * penColors.length)];
+      g.shadowColor = col;
+      g.shadowBlur = 6;
+      g.fillStyle = col;
+      g.fillRect(Math.random() * 250, 4 + Math.random() * 22, 2.5, 7);
+    }
+    g.shadowBlur = 0;
+    return new THREE.CanvasTexture(c);
+  }
+  const crowdMats = [makeCrowdTexture(), makeCrowdTexture()].map((t) => new THREE.MeshBasicMaterial({ map: t }));
+  // スピーカー
+  function makeSpeakerTexture() {
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = '#0e0e12';
+    g.fillRect(0, 0, 64, 64);
+    for (const [cy, r] of [[20, 13], [48, 9]]) {
+      g.strokeStyle = '#4a4a55';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(32, cy, r, 0, Math.PI * 2);
+      g.stroke();
+      g.fillStyle = '#22222a';
+      g.beginPath();
+      g.arc(32, cy, r - 3, 0, Math.PI * 2);
+      g.fill();
+    }
+    return new THREE.CanvasTexture(c);
+  }
+  const speakerMat = new THREE.MeshBasicMaterial({ map: makeSpeakerTexture() });
   // 街灯の暖色グロー
   const glowC = document.createElement('canvas');
   glowC.width = 64; glowC.height = 64;
@@ -998,6 +1177,19 @@ const P_SPACING = 8;
       trash.scale.set(0.7, 0.55, 0.7);
       trash.position.y = 0.27;
       parts.trash = [trash];
+      // 観客の列 (テッペン)
+      const crowd = new THREE.Mesh(boxGeo, crowdMats[i % crowdMats.length]);
+      crowd.scale.set(5.5, 1.4, 1.2);
+      crowd.position.y = 0.7;
+      parts.crowd = [crowd];
+      // スピーカースタック (テッペン)
+      const spk1 = new THREE.Mesh(boxGeo, speakerMat);
+      spk1.scale.set(1.1, 1.5, 1.0);
+      spk1.position.y = 0.75;
+      const spk2 = new THREE.Mesh(boxGeo, speakerMat);
+      spk2.scale.set(0.9, 1.1, 0.9);
+      spk2.position.y = 2.0;
+      parts.speaker = [spk1, spk2];
 
       for (const arr of Object.values(parts)) for (const m of arr) { m.visible = false; g.add(m); }
       scene.add(g);
@@ -1026,6 +1218,10 @@ function styleProp(p) {
   } else if (mode === 'ug') {
     if (r < 0.3) { kind = 'neonSm'; x = p.side * 7; }
     else if (r < 0.5) { kind = 'trash'; x = p.side * 6.8; }
+  } else if (mode === 'stage') {
+    // ライブ会場: 沿道はほぼ観客、ときどきスピーカースタック
+    if (r < 0.65) { kind = 'crowd'; x = p.side * 6.0; }
+    else if (r < 0.85) { kind = 'speaker'; x = p.side * 6.4; }
   }
   p.kind = kind;
   p.x = x;
@@ -1057,6 +1253,9 @@ function applyDistrictScenery(d) {
   for (const r of guardrails) r.visible = d.props === 'kokudou';
   for (const f of fields) f.visible = d.props === 'rural';
   mountainGroup.visible = d.ch <= 3;
+  const isStage = d.props === 'stage';
+  for (const b of searchlights) b.visible = isStage;
+  confetti.points.visible = isStage;
 }
 
 // 章に入る: バナー + セリフ + ビート切替 + 風景切替
@@ -1743,23 +1942,23 @@ function spawnRow(z) {
     if (ch === 't' || ch === 's') openLanes.push(lane);
   }
 
-  // キャッシュ列: 空きレーンに60%で3〜5枚
-  if (openLanes.length && Math.random() < 0.6) {
+  // キャッシュ列: 空きレーンに50%で3〜4枚
+  if (openLanes.length && Math.random() < 0.5) {
     const lane = openLanes[Math.floor(Math.random() * openLanes.length)];
-    const n = 3 + Math.floor(Math.random() * 3);
+    const n = 3 + Math.floor(Math.random() * 2);
     for (let i = 0; i < n; i++) {
       spawnItem('cash', lane, z + 2.5 + i * 1.3);
     }
   }
-  // レアアイテム: 6行に1回程度、空きレーンに
-  if (openLanes.length && rowsSpawned > 3 && Math.random() < 0.17) {
+  // レアアイテム: 11行に1回程度、空きレーンに
+  if (openLanes.length && rowsSpawned > 3 && Math.random() < 0.09) {
     const lane = openLanes[Math.floor(Math.random() * openLanes.length)];
     const roll = Math.random();
     const type = roll < 0.3 ? 'mic' : roll < 0.55 ? 'weed' : roll < 0.8 ? 'bling' : 'gal';
     spawnItem(type, lane, z + 5.5);
   }
-  // 裏ルート入口 (光るマンホール): たまに出る
-  if (openLanes.length && distance > 250 && Math.random() < 0.08) {
+  // 裏ルート入口 (光るマンホール): レア。見つけたらラッキー
+  if (openLanes.length && distance > 400 && Math.random() < 0.02) {
     const lane = openLanes[Math.floor(Math.random() * openLanes.length)];
     const mesh = acquireMesh('alley');
     mesh.position.set(lane * LANE_W, 0, -(z + 9));
@@ -1822,6 +2021,7 @@ function beginGame() {
   alley = 0;
   scene.fog.near = 25;
   scene.fog.far = 85;
+  for (const w of alleyWalls) w.mesh.visible = false;
   bestBeating = false;
   bestLineSpawned = false;
   runStats = { nearMiss: 0, cash: 0, escapes: 0 };
@@ -1950,9 +2150,20 @@ function enterAlley() {
   alley = 4000;
   stats.alleys++;
   showBanner('裏ルート!!');
+  showStory('ここは俺らのギャラリーだ');
   popText('🕳 地下に潜った!');
-  if (AC) playRiser(AC.currentTime, 0.5, 0.07);
-  vibrate(30);
+  // 突入を明確に: フラッシュ + グラフィティ壁 + 強い音
+  flashEl.classList.remove('pop');
+  void flashEl.offsetWidth;
+  flashEl.classList.add('pop');
+  for (const w of alleyWalls) w.mesh.visible = true;
+  if (AC) {
+    const t = AC.currentTime;
+    playRiser(t, 0.5, 0.09);
+    thump(50, t, 0.5, 0.4);
+    noiseHit(t, { filter: 'lowpass', freq: 600, vol: 0.3, dur: 0.4 });
+  }
+  vibrate([40, 30, 80]);
   // チェイス中なら地下でまける
   if (chase > 0) {
     chase = 0;
@@ -1975,6 +2186,7 @@ function enterAlley() {
 function exitAlley() {
   alley = 0;
   showBanner('表通りへ!');
+  for (const w of alleyWalls) w.mesh.visible = false;
   if (AC) playRiser(AC.currentTime, 0.4, 0.05);
   scene.fog.near = 25;
   scene.fog.far = 85;
@@ -2046,6 +2258,7 @@ function die(reason) {
     alley = 0;
     scene.fog.near = 25;
     scene.fog.far = 85;
+    for (const w of alleyWalls) w.mesh.visible = false;
   }
   cop.group.visible = false;
   copLight.intensity = 0;
@@ -2163,7 +2376,7 @@ function update(dt) {
   }
 
   // 画面エフェクト
-  const wantTint = fever > 0 ? 'fever' : chill > 0 ? 'chill' : '';
+  const wantTint = alley > 0 ? 'alley' : fever > 0 ? 'fever' : chill > 0 ? 'chill' : '';
   if (tintEl.className !== wantTint) tintEl.className = wantTint;
   scene.fog.color.setHex(alley > 0 ? 0x06140c : fever > 0 ? 0x2a1f08 : chill > 0 ? 0x1a0c2e : DISTRICTS[districtIdx].fog);
   scene.background.copy(scene.fog.color);
@@ -2248,6 +2461,11 @@ function update(dt) {
   // 白線が手前に流れる向き (進行方向と逆) にスクロール
   roadTex.offset.y = (distance / ROAD_TILE) % 1;
   if (fields[0].visible) fieldTex.offset.y = (distance / 16) % 1;
+  if (alley > 0) {
+    for (const w of alleyWallTexes) {
+      w.tex.offset.x = (w.side < 0 ? 1 : -1) * (distance / 32) % 1;
+    }
+  }
 
   // エンティティ更新
   const playerLane = Math.round(player.x);
@@ -2457,6 +2675,19 @@ function loop(t) {
     } else {
       goldAura.intensity = 0;
     }
+  }
+
+  // テッペンのライブ演出 (サーチライトの揺れ + 紙吹雪)
+  if (searchlights[0].visible) {
+    for (let i = 0; i < searchlights.length; i++) {
+      searchlights[i].rotation.z = Math.sin(t * 0.0006 + i * 1.7) * 0.45;
+    }
+    const cp = confetti.pos;
+    for (let i = 0; i < confetti.count; i++) {
+      cp[i * 3 + 1] -= dt * 0.0035;
+      if (cp[i * 3 + 1] < 0.2) cp[i * 3 + 1] += 16;
+    }
+    confetti.points.geometry.attributes.position.needsUpdate = true;
   }
 
   // カメラ
