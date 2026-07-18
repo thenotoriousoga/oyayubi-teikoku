@@ -157,9 +157,10 @@ const DEATH_REASONS = {
   hole: '🕳 工事穴にまっさかさま',
 };
 
-// ===== サウンド (pk/game.js から移植) =====
+// ===== サウンド =====
 let AC = null;
 let noiseBuf = null;
+let masterBus = null; // マスターコンプレッサー: 全音をここに通してグルーと音圧を出す
 
 function ensureAudio() {
   if (!AC) {
@@ -169,10 +170,19 @@ function ensureAudio() {
       noiseBuf = AC.createBuffer(1, len, AC.sampleRate);
       const data = noiseBuf.getChannelData(0);
       for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      masterBus = AC.createDynamicsCompressor();
+      masterBus.threshold.value = -14;
+      masterBus.knee.value = 10;
+      masterBus.ratio.value = 4;
+      masterBus.attack.value = 0.003;
+      masterBus.release.value = 0.22;
+      masterBus.connect(AC.destination);
     } catch (e) { AC = null; }
   }
   if (AC && AC.state === 'suspended') AC.resume();
 }
+
+function busOut() { return masterBus || AC.destination; }
 
 function tone(t, { type = 'sine', freq, slideTo = null, slideDur = null, attack = 0, vol, dur }) {
   if (!AC) return;
@@ -187,7 +197,7 @@ function tone(t, { type = 'sine', freq, slideTo = null, slideDur = null, attack 
     g.gain.setValueAtTime(vol, t);
   }
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g).connect(AC.destination);
+  o.connect(g).connect(busOut());
   o.start(t); o.stop(t + dur + 0.02);
 }
 
@@ -206,7 +216,7 @@ function noiseHit(t, { filter, freq, slideTo = null, Q = 1, attack = 0, vol, dur
     g.gain.setValueAtTime(vol, t);
   }
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  n.connect(f).connect(g).connect(AC.destination);
+  n.connect(f).connect(g).connect(busOut());
   n.start(t); n.stop(t + dur + 0.02);
 }
 
@@ -214,20 +224,55 @@ function thump(freq, when, gain, dur) {
   tone(when, { freq, slideTo: Math.max(30, freq * 0.55), vol: gain, dur });
 }
 
-function drumKick(t) {
-  tone(t, { freq: 110, slideTo: 42, slideDur: 0.11, vol: 0.30, dur: 0.14 });
+function drumKick(t, vol = 1) {
+  // 胴 (ピッチドロップ) + クリック (アタックの芯)
+  tone(t, { freq: 120, slideTo: 44, slideDur: 0.1, vol: 0.32 * vol, dur: 0.16 });
+  noiseHit(t, { filter: 'highpass', freq: 3000, vol: 0.05 * vol, dur: 0.012 });
 }
-function drumSnare(t) {
-  noiseHit(t, { filter: 'bandpass', freq: 1900, Q: 0.8, vol: 0.14, dur: 0.09 });
+function drumSnare(t, vol = 1) {
+  // ノイズ + 胴鳴り (190Hz) で厚みを出す
+  noiseHit(t, { filter: 'bandpass', freq: 1900, Q: 0.8, vol: 0.15 * vol, dur: 0.11 });
+  tone(t, { type: 'triangle', freq: 190, slideTo: 150, vol: 0.09 * vol, dur: 0.08 });
 }
-function drumHat(t, open) {
-  noiseHit(t, { filter: 'highpass', freq: 7500, vol: open ? 0.05 : 0.035, dur: open ? 0.08 : 0.03 });
+function drumClap(t, vol = 1) {
+  // 3連バーストの908クラップ
+  for (const [dt2, v] of [[0, 0.7], [0.012, 0.55], [0.026, 1]]) {
+    noiseHit(t + dt2, { filter: 'bandpass', freq: 1400, Q: 1.2, vol: 0.12 * v * vol, dur: dt2 === 0.026 ? 0.13 : 0.03 });
+  }
+}
+function drumHat(t, open, vol = 1) {
+  noiseHit(t, { filter: 'highpass', freq: 7800, vol: (open ? 0.05 : 0.035) * vol, dur: open ? 0.1 : 0.03 });
 }
 function playPiano(freq, t, vol = 0.04) {
   tone(t, { type: 'triangle', freq, attack: 0.15, vol, dur: 1.2 });
 }
 function play808(freq, t, vol = 0.25) {
-  tone(t, { freq: freq * 1.5, slideTo: freq, slideDur: 0.08, vol, dur: 0.8 });
+  // サイン + 薄い矩形波レイヤーで飽和感 (サブが鳴らないスマホSPでも聞こえる)
+  tone(t, { freq: freq * 1.5, slideTo: freq, slideDur: 0.07, vol, dur: 0.85 });
+  tone(t, { type: 'square', freq: freq * 1.5, slideTo: freq, slideDur: 0.07, vol: vol * 0.12, dur: 0.3 });
+}
+function play808Slide(from, to, t, dur = 0.5, vol = 0.25) {
+  // ドリルの飛び道具: 音程から音程へ滑る808
+  tone(t, { freq: from, slideTo: to, slideDur: dur, vol, dur: dur + 0.25 });
+  tone(t, { type: 'square', freq: from, slideTo: to, slideDur: dur, vol: vol * 0.1, dur: dur });
+}
+function playSawChord(freqs, t, vol = 0.03, dur = 0.35) {
+  // デチューンした2枚重ねの極太シンセスタブ
+  for (const f of freqs) {
+    tone(t, { type: 'sawtooth', freq: f * 0.996, vol: vol / 2, dur, attack: 0.01 });
+    tone(t, { type: 'sawtooth', freq: f * 1.004, vol: vol / 2, dur, attack: 0.01 });
+  }
+}
+function playPluck(freq, t, vol = 0.03) {
+  // 暗いプラック (ドリルのメロディ用)
+  tone(t, { type: 'triangle', freq, vol, dur: 0.24 });
+  tone(t, { type: 'sine', freq: freq * 2, vol: vol * 0.35, dur: 0.14 });
+}
+function playAirhorn(t, vol = 0.045) {
+  // パーティーの定番エアホーン
+  for (let i = 0; i < 3; i++) {
+    tone(t + i * 0.16, { type: 'sawtooth', freq: 508, slideTo: 440, slideDur: 0.1, vol, dur: 0.14 });
+  }
 }
 function playBell(freq, t, vol = 0.01) {
   tone(t, { freq, vol, dur: 0.6 });
@@ -261,83 +306,142 @@ function playCrowd(t) {
 }
 
 // --- シーケンサー: 章ごとにジャンルが変わる (チル中はBPM半分、フィーバー中はハット増量は全ジャンル共通) ---
-// kicks の値: 0 = キックのみ / 周波数 = 808を重ねる
+// kicks の値: 0 = キックのみ / 周波数 = 808を重ねる。kicksB は奇数小節用 (2小節ループ)
 const BEAT_STYLES = {
   boombap: {
-    bpm: 90, swing8: 0.55,
-    kicks: { 0: 0, 7: 0, 10: 0 }, snares: [4, 12], hatMode: 'boombap',
-    chords: { 0: [220.00, 261.63, 329.63, 392.00] }, // Am7
+    bpm: 93, swing8: 0.55,
+    kicks: { 0: 0, 7: 0, 10: 0 },
+    kicksB: { 0: 0, 5: 0, 10: 0, 13: 0 },
+    snares: [4, 12], snareRand: { s: 14, prob: 0.25, vol: 0.4 },
+    hatMode: 'boombap',
+    // Am9 / Fmaj7 の2小節ループ (くすんだローズ風ボイシング)
+    chordsByMeasure: [
+      [261.63, 329.63, 392.00, 493.88], // C E G B (Am9の上物)
+      [261.63, 349.23, 440.00, 659.25], // C F A E (Fmaj7)
+    ],
+    chordSteps: [0],
     bass: [{ s: 0, f: 55.00 }, { s: 7, f: 82.41 }, { s: 10, f: 65.41 }],
+    bassB: [{ s: 0, f: 87.31 }, { s: 5, f: 65.41 }, { s: 10, f: 55.00 }],
+    // 小節3・7の終わりにAmペンタの下降フィル
+    melody: [
+      { m: 3, s: 12, f: 440.00 }, { m: 3, s: 13, f: 392.00 }, { m: 3, s: 14, f: 329.63 }, { m: 3, s: 15, f: 293.66 },
+      { m: 7, s: 12, f: 329.63 }, { m: 7, s: 13, f: 392.00 }, { m: 7, s: 14, f: 440.00 }, { m: 7, s: 15, f: 523.25 },
+    ],
+    melodyM: 8, melodyInst: 'piano', melodyVol: 0.03,
     fx: { crackle: true },
   },
   jazzrap: {
-    bpm: 92, swing8: 0.55,
-    kicks: { 0: 0, 10: 0 }, snares: [4, 12], hatMode: 'jazz',
+    bpm: 90, swing8: 0.6,
+    kicks: { 0: 0, 10: 0 },
+    snares: [4, 12], snareVol: 0.6, // ブラシ風に軽く
+    hatMode: 'jazz',
+    // ii-V-I-vi (9th/13thのオープンボイシング)
     chordsByMeasure: [
-      [146.83, 174.61, 220.00, 261.63], // Dm7
-      [196.00, 246.94, 293.66, 349.23], // G7
-      [130.81, 164.81, 196.00, 246.94], // Cmaj7
-      [130.81, 164.81, 196.00, 246.94],
+      [293.66, 349.23, 440.00, 659.25], // Dm9:  D F A E
+      [196.00, 246.94, 349.23, 659.25], // G13:  G B F E
+      [329.63, 392.00, 493.88, 587.33], // Cmaj9: E G B D
+      [220.00, 261.63, 329.63, 493.88], // Am9:  A C E B
     ],
-    chordSteps: [0, 8],
+    chordSteps: [0, 6], // 2拍目の裏でシンコペーション
     bass: 'walking',
     walk: [
-      [73.42, 87.31, 110.00, 130.81],
-      [98.00, 123.47, 146.83, 87.31],
-      [65.41, 82.41, 98.00, 110.00],
-      [65.41, 98.00, 82.41, 73.42],
+      [73.42, 87.31, 110.00, 123.47],  // D F A B → G へ半音上行
+      [98.00, 123.47, 146.83, 174.61], // G B D F
+      [65.41, 82.41, 98.00, 110.00],   // C E G A
+      [110.00, 98.00, 82.41, 73.42],   // A G E D (ターンアラウンド)
     ],
     fx: {},
   },
   gfunk: {
-    bpm: 95,
-    kicks: { 0: 0, 10: 0 }, snares: [4, 12], hatMode: 'gfunk',
-    chords: { 0: [220.00, 261.63, 329.63] },
-    bass: [{ s: 0, f: 55.00 }, { s: 3, f: 110.00 }, { s: 8, f: 55.00 }, { s: 11, f: 110.00 }],
+    bpm: 92,
+    kicks: { 0: 0, 7: 0, 10: 0 },
+    snares: [4, 12], clap: true, // スネア+クラップのレイヤー
+    hatMode: 'gfunk',
+    // Am / Am / G / F を裏拍のシンセコンプで刻む (ウエッサイのバウンス)
+    chordsByMeasure: [
+      [220.00, 261.63, 329.63],
+      [220.00, 261.63, 329.63],
+      [196.00, 246.94, 293.66],
+      [174.61, 220.00, 261.63],
+    ],
+    chordSteps: [2, 10],
+    sawChords: true,
+    // ファンクの跳ねるベース (ルートとオクターブのポップ)
+    bass: [{ s: 0, f: 55.00 }, { s: 3, f: 110.00 }, { s: 6, f: 82.41 }, { s: 8, f: 55.00 }, { s: 11, f: 110.00 }, { s: 14, f: 65.41 }],
+    // 歌う口笛リード (2小節フレーズ)
     lead: [
-      { m: 0, s: 0, f: 880.00, to: 987.77 }, { m: 0, s: 8, f: 1174.66, to: 1046.50 },
-      { m: 1, s: 4, f: 987.77, to: 880.00 }, { m: 1, s: 12, f: 880.00, to: 659.25 },
+      { m: 0, s: 0, f: 659.25, to: 523.25 }, { m: 0, s: 10, f: 440.00, to: 493.88 },
+      { m: 1, s: 4, f: 523.25, to: 440.00 }, { m: 1, s: 12, f: 659.25, to: 783.99 },
     ],
     fx: {},
   },
   drill: {
-    bpm: 70,
-    kicks: { 0: 36.71, 6: 43.65, 8: 0, 14: 49.00 }, snares: [8], hatMode: 'drill',
-    chords: { 0: [146.83, 174.61, 220.00] },
+    bpm: 72,
+    // メロディックにスライドする808 (2小節ループ)
+    kicks: { 0: 36.71, 6: 43.65, 8: 0, 12: 32.70 },
+    kicksB: { 0: 36.71, 4: 55.00, 8: 0, 14: 43.65 },
+    slide808: [{ m: 1, s: 10, from: 55.00, to: 36.71 }], // 奇数小節でD1へ滑り落ちる
+    snares: [8], snareRand: { s: 15, prob: 0.3, vol: 0.4 },
+    hatMode: 'drill',
+    chords: { 0: [146.83, 174.61, 220.00] }, // Dm 薄く
     chordEveryOtherMeasure: true,
-    bells: { 6: 1174.66 },
-    bellEveryOtherMeasure: true,
+    // 不穏なハーモニックマイナーのプラック
+    melody: [
+      { m: 0, s: 0, f: 587.33 }, { m: 0, s: 3, f: 698.46 }, { m: 0, s: 6, f: 659.25 }, { m: 0, s: 10, f: 554.37 },
+      { m: 1, s: 0, f: 587.33 }, { m: 1, s: 8, f: 440.00 },
+    ],
+    melodyM: 2, melodyInst: 'pluck', melodyVol: 0.022,
     bass: [],
     fx: {},
   },
-  trap: { // 旧来のメインビートを完全再現
-    bpm: 80,
-    kicks: { 0: 55.00, 3: 48.99, 4: 0, 11: 58.27 }, snares: [8], snareRand: { s: 15, prob: 0.4 },
+  trap: {
+    bpm: 75,
+    // Amの808が歌う2小節パターン
+    kicks: { 0: 55.00, 6: 55.00, 11: 65.41 },
+    kicksB: { 0: 55.00, 3: 49.00, 10: 82.41, 14: 65.41 },
+    snares: [8], clap: true, snareRand: { s: 15, prob: 0.35, vol: 0.5 },
     hatMode: 'trap',
-    chords: { 0: [220.00, 261.63, 329.63], 8: [174.61, 261.63, 349.23] }, // Am / F
-    bells: { 4: 880.00, 12: 1046.50 },
+    chordsByMeasure: [
+      [220.00, 261.63, 329.63], // Am
+      [220.00, 261.63, 329.63],
+      [174.61, 220.00, 261.63], // F
+      [174.61, 220.00, 261.63],
+    ],
+    chordSteps: [0],
+    // Amペンタ下降のダークベルアルペジオ (奇数小節)
+    melody: [
+      { m: 1, s: 0, f: 1318.51 }, { m: 1, s: 2, f: 1046.50 }, { m: 1, s: 4, f: 880.00 }, { m: 1, s: 6, f: 783.99 },
+    ],
+    melodyM: 2, melodyInst: 'bell', melodyVol: 0.014,
     bass: [],
     fx: { laserM: 3, chantS: 7, riserM: 7 },
     breakMeasure: 7,
   },
   party: {
-    bpm: 104,
-    kicks: { 0: 0, 4: 0, 8: 0, 12: 0 }, snares: [4, 12], hatMode: 'party',
+    bpm: 106,
+    kicks: { 0: 0, 4: 0, 8: 0, 12: 0 }, // 四つ打ち
+    snares: [4, 12], clap: true,
+    hatMode: 'party',
+    // アンセム進行 C→G→Am→F を極太シンセで
     chordsByMeasure: [
-      [261.63, 329.63, 392.00], // C
-      [246.94, 293.66, 392.00], // G
-      [220.00, 261.63, 329.63], // Am
-      [220.00, 261.63, 349.23], // F
+      [261.63, 329.63, 392.00, 523.25],
+      [246.94, 293.66, 392.00, 493.88],
+      [220.00, 261.63, 329.63, 440.00],
+      [220.00, 261.63, 349.23, 440.00],
     ],
-    chordSteps: [0, 8],
+    chordSteps: [0, 10],
+    sawChords: true,
     bassByMeasure: [65.41, 49.00, 55.00, 43.65],
-    bassSteps: [0, 8],
+    bassSteps: [0, 6, 8, 14],
+    bassOctave: [0, 1, 0, 1], // bassSteps に対応: 1はオクターブ上
     bass: [],
-    bellsByMeasure: [
-      { 0: 1046.50, 6: 1318.51, 10: 1567.98 },
-      { 0: 1567.98, 6: 1318.51, 10: 2093.00 },
+    // Cメジャーペンタの祝祭フック (2小節)
+    melody: [
+      { m: 0, s: 0, f: 783.99 }, { m: 0, s: 3, f: 659.25 }, { m: 0, s: 6, f: 783.99 }, { m: 0, s: 10, f: 880.00 }, { m: 0, s: 12, f: 783.99 },
+      { m: 1, s: 0, f: 659.25 }, { m: 1, s: 6, f: 587.33 }, { m: 1, s: 8, f: 523.25 },
     ],
-    fx: { chantS: 7, riserEvery: 4, crowd: true },
+    melodyM: 2, melodyInst: 'bell', melodyVol: 0.02,
+    fx: { chantS: 7, riserEvery: 4, crowd: true, airhorn: true },
   },
 };
 
@@ -379,17 +483,22 @@ function playBeatStep(step, t) {
   if (fx.riserM != null && measure === fx.riserM && s === 8) playRiser(t, sd * 4);
   if (fx.riserEvery && measure % fx.riserEvery === fx.riserEvery - 1 && s === 12) playRiser(t, sd * 4);
   if (fx.crowd && measure % 8 === 7 && s === 0 && Math.random() < 0.5) playCrowd(t);
+  if (fx.airhorn && measure % 8 === 0 && s === 0 && Math.random() < 0.4) playAirhorn(t + sd);
 
   // コード
   const chordVol = chill > 0 ? 0.055 : 0.04;
+  const playChord = (freqs, vol) => {
+    if (st.sawChords) playSawChord(freqs, t, vol * 0.85);
+    else freqs.forEach((f) => playPiano(f, t, vol));
+  };
   if (st.chordsByMeasure) {
     const chord = st.chordsByMeasure[measure % st.chordsByMeasure.length];
     if ((st.chordSteps || [0]).includes(s)) {
-      chord.forEach((f) => playPiano(f, t, s === 0 ? chordVol : chordVol * 0.75));
+      playChord(chord, s === (st.chordSteps || [0])[0] ? chordVol : chordVol * 0.7);
     }
   } else if (st.chords && st.chords[s]) {
     if (!(st.chordEveryOtherMeasure && measure % 2 === 1)) {
-      st.chords[s].forEach((f) => playPiano(f, t, chordVol));
+      playChord(st.chords[s], chordVol);
     }
   }
 
@@ -400,10 +509,31 @@ function playBeatStep(step, t) {
     playBell(bells[s], t);
   }
 
-  // キック / 808
-  if (s in st.kicks) {
+  // メロディ (ジャンルごとのフレーズ)
+  if (st.melody) {
+    const mm = measure % (st.melodyM || 2);
+    for (const n of st.melody) {
+      if (n.m === mm && n.s === s) {
+        const v = st.melodyVol || 0.02;
+        if (st.melodyInst === 'pluck') playPluck(n.f, t, v);
+        else if (st.melodyInst === 'bell') playBell(n.f, t, v);
+        else playPiano(n.f, t, v);
+      }
+    }
+  }
+
+  // キック / 808 (kicksB があれば奇数小節はそちら = 2小節ループ)
+  const kicks = (st.kicksB && measure % 2 === 1) ? st.kicksB : st.kicks;
+  if (s in kicks) {
     drumKick(t);
-    if (st.kicks[s]) play808(st.kicks[s], t);
+    if (kicks[s]) play808(kicks[s], t);
+  }
+  // ドリルの滑る808
+  if (st.slide808) {
+    const mm = measure % 2;
+    for (const sl of st.slide808) {
+      if (sl.m === mm && sl.s === s) play808Slide(sl.from, sl.to, t);
+    }
   }
 
   // ベース
@@ -413,11 +543,16 @@ function playBeatStep(step, t) {
       playBassShort(bar[s / 4], t, 0.16);
     }
   } else if (st.bassByMeasure) {
-    if ((st.bassSteps || [0]).includes(s)) {
-      playBassShort(st.bassByMeasure[measure % st.bassByMeasure.length], t, 0.2);
+    const steps = st.bassSteps || [0];
+    const idx = steps.indexOf(s);
+    if (idx >= 0) {
+      let f = st.bassByMeasure[measure % st.bassByMeasure.length];
+      if (st.bassOctave && st.bassOctave[idx]) f *= 2;
+      playBassShort(f, t, 0.2);
     }
-  } else if (st.bass) {
-    for (const b of st.bass) if (b.s === s) playBassShort(b.f, t);
+  } else {
+    const bass = (st.bassB && measure % 2 === 1) ? st.bassB : st.bass;
+    if (bass) for (const b of bass) if (b.s === s) playBassShort(b.f, t);
   }
 
   // リード (Gファンクの口笛)
@@ -426,9 +561,15 @@ function playBeatStep(step, t) {
     for (const l of st.lead) if (l.m === m2 && l.s === s) playWhistle(l.f, l.to, t);
   }
 
-  // スネア
-  if (st.snares.includes(s)) drumSnare(t);
-  if (st.snareRand && s === st.snareRand.s && !isBreak && Math.random() < st.snareRand.prob) drumSnare(t);
+  // スネア / クラップ
+  if (st.snares.includes(s)) {
+    const v = st.snareVol ?? 1;
+    drumSnare(t, v);
+    if (st.clap) drumClap(t, 0.9);
+  }
+  if (st.snareRand && s === st.snareRand.s && !isBreak && Math.random() < st.snareRand.prob) {
+    drumSnare(t, st.snareRand.vol ?? 1);
+  }
 
   if (isBreak) return;
   if (chill > 0) {
@@ -436,41 +577,54 @@ function playBeatStep(step, t) {
     if (s % 4 === 2) drumHat(t);
     return;
   }
-  // ハット (ジャンルの骨格)
+  // ハット (ジャンルの骨格)。表拍を強く、裏を弱くしてグルーヴを出す
+  const acc = s % 4 === 0 ? 1 : s % 2 === 0 ? 0.75 : 0.5;
   switch (st.hatMode) {
     case 'boombap':
+      if (s % 2 === 0) drumHat(t, s === 14, acc);
+      break;
     case 'gfunk':
-      if (s % 2 === 0) drumHat(t, s === 14);
+      // 8分メイン + 薄い16分シェイカー
+      if (s % 2 === 0) drumHat(t, s === 14, acc);
+      else drumHat(t, false, 0.3);
       break;
     case 'jazz':
       if (s % 2 === 0) drumRide(t);
+      if (s === 4 || s === 12) drumHat(t, false, 0.5); // フットハット
       break;
     case 'drill':
       if (s === 3 || s === 11) {
         const tri = sd / 3;
         drumHat(t); drumHat(t + tri); drumHat(t + tri * 2);
+      } else if (s === 7 && measure % 2 === 1) {
+        drumHat(t, false, acc); drumHat(t + sd / 4, false, 0.5); // 32分のスタッター
       } else {
-        drumHat(t);
+        drumHat(t, false, acc);
       }
       break;
     case 'party':
-      if (s % 2 === 0) drumHat(t, s % 4 === 2);
+      if (s % 4 === 2) drumHat(t, true);       // 裏拍オープン (四つ打ちの命)
+      else if (s % 2 === 0) drumHat(t, false, 0.6);
+      else drumHat(t, false, 0.3);
       break;
     case 'trap':
     default:
       if (s === 6 || s === 14) {
-        drumHat(t);
-        drumHat(t + sd / 2);
+        drumHat(t, false, acc);
+        drumHat(t + sd / 2, false, 0.6);
       } else if (s === 11) {
         const tri = sd / 3;
-        drumHat(t); drumHat(t + tri); drumHat(t + tri * 2);
+        drumHat(t); drumHat(t + tri, false, 0.7); drumHat(t + tri * 2, false, 0.5);
+      } else if (s === 15 && measure % 2 === 1) {
+        // 小節終わりの32分ロール
+        for (let i = 0; i < 4; i++) drumHat(t + (sd / 4) * i, false, 0.4 + i * 0.15);
       } else {
-        drumHat(t, s === 7 || s === 15);
+        drumHat(t, s === 7, acc);
       }
       break;
   }
   // フィーバー中は裏拍にもハットを刻んで密度を上げる
-  if (fever > 0) drumHat(t + sd / 2);
+  if (fever > 0) drumHat(t + sd / 2, false, 0.6);
 }
 
 // --- 効果音 ---
