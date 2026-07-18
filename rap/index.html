@@ -34,12 +34,13 @@
     <div class="eyebrow">REAL RECOGNIZE REAL</div>
     <h1 class="logo">RUN DA<br>CITY</h1>
     <p class="logo-sub">テッペン取るまで、止まらねぇ</p>
-    <p class="rules">ビートに乗って夜の街をブチ抜け。<br><b>スワイプ</b>でヘイターをスカし、<b>キャッシュ</b>は総取り。<br>🎤 でフィーバー / 🍃 でチル / 💎 でSWAG爆上げ / 💁‍♀️ は身代わり<br>転んでも1回はセーフ、🚔 <b>ポリス</b>から逃げ切れ。</p>
+    <p class="rules">ビートに乗って夜の街をブチ抜け。<br><b>スワイプ</b>でヘイターをスカし、<b>キャッシュ</b>は総取り。<br>🎤 フィーバー / 🍃 チル / 💎 SWAG爆上げ / 💁‍♀️ 身代わり<br>転んでも1回はセーフ、🚔 <b>ポリス</b>から逃げ切れ。<br>ただし🕳 <b>工事穴</b>に落ちたら一巻の終わり。跳べ。<br>光るマンホールは…入ってみな。</p>
     <div class="entry-row">
       <input id="name-input" maxlength="10" placeholder="MCネーム (10文字まで)" autocomplete="off">
     </div>
     <div class="start-btns">
       <button id="show-rank-start" class="rank-btn">👑 CITY KINGS</button>
+      <button id="show-locker" class="rank-btn">🎖 バッジ</button>
     </div>
     <div class="tap-label" id="start-tap">タップでかましたれ</div>
     <a id="back-portal" href="/">← ゲームせんたくに戻る</a>
@@ -54,10 +55,12 @@
     </div>
     <div class="over-score">記録 <span id="over-score">—</span></div>
     <div class="over-best">ベスト <span id="over-best">—</span></div>
+    <div id="run-stats"></div>
     <div id="over-comment"></div>
     <div id="top10-badge" class="hidden">👑 CITY KINGS入り!</div>
     <div class="start-btns">
-      <button id="show-rank-over" class="rank-btn">ランキングを見る</button>
+      <button id="show-rank-over" class="rank-btn">ランキング</button>
+      <button id="share-btn" class="rank-btn">📸 シェア</button>
       <button id="back-title" class="rank-btn">タイトルへ</button>
     </div>
     <div class="tap-label" id="over-tap">タップでリベンジ</div>
@@ -67,6 +70,17 @@
     <h2 class="rank-heading">👑 CITY KINGS</h2>
     <p class="rank-sub">夜の街を制した者たち TOP10</p>
     <ol id="rank-list"></ol>
+    <div class="tap-label">タップで閉じる</div>
+  </div>
+
+  <div id="locker-overlay" class="overlay scroll hidden">
+    <h2 class="rank-heading">🎖 バッジ・ロッカー</h2>
+    <div class="locker-label">パーカー</div>
+    <div id="hoodie-skins" class="skin-row"></div>
+    <div class="locker-label">キャップ</div>
+    <div id="cap-skins" class="skin-row"></div>
+    <h3 class="zukan-sub">🎖 バッジ</h3>
+    <div id="badges"></div>
     <div class="tap-label">タップで閉じる</div>
   </div>
 

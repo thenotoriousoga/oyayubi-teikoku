@@ -505,6 +505,150 @@ html, body {
   background: none;
 }
 
+/* ===== ラン統計 ===== */
+#run-stats {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(244, 242, 251, 0.75);
+}
+
+/* ===== ロッカー ===== */
+.overlay.scroll {
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 40px);
+  padding-bottom: 40px;
+}
+
+#locker-overlay {
+  background: rgba(8, 6, 16, 0.96);
+}
+
+.locker-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: rgba(244, 242, 251, 0.6);
+  width: 100%;
+  max-width: 360px;
+  text-align: left;
+}
+
+.skin-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  justify-content: flex-start;
+}
+
+.skin-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 8px 10px;
+  width: 82px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  color: var(--floodlight);
+}
+
+.skin-chip.equipped {
+  border-color: var(--gold);
+  background: rgba(242, 185, 12, 0.14);
+}
+
+.skin-chip.locked {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.skin-swatch {
+  width: 34px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+}
+
+.skin-name {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.zukan-sub {
+  font-family: var(--font-street);
+  font-size: 18px;
+  color: var(--gold);
+  margin-top: 14px;
+}
+
+#badges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.ach {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 9px 14px;
+  text-align: left;
+}
+
+.ach.done {
+  background: rgba(242, 185, 12, 0.16);
+  border-color: rgba(242, 185, 12, 0.6);
+}
+
+.ach-medal {
+  font-size: 20px;
+}
+
+.ach.locked .ach-medal {
+  filter: grayscale(1) brightness(0.5);
+}
+
+.ach-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ach-name {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--floodlight);
+}
+
+.ach.done .ach-name {
+  color: var(--gold);
+}
+
+.ach-desc {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(244, 242, 251, 0.65);
+}
+
+.ach-reward {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--gold);
+}
+
 /* ===== アクセシビリティ ===== */
 button:focus-visible, input:focus-visible {
   outline: 3px solid var(--gold);

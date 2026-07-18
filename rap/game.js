@@ -41,9 +41,12 @@ const FEVER_MS = 5000;
 const CHILL_MS = 5000;
 const SCORE_CAP = 9_999_999;
 
-// 開発用: ?safe=1 で障害物なし
+// 開発用: ?safe=1 で障害物なし、?alleyAt=N / ?holeAt=N で N m先に強制配置
 const DEBUG_PARAMS = new URLSearchParams(location.search);
 const DEBUG_SAFE = DEBUG_PARAMS.get('safe') === '1';
+const DEBUG_ALLEY_AT = Number(DEBUG_PARAMS.get('alleyAt')) || 0;
+const DEBUG_HOLE_AT = Number(DEBUG_PARAMS.get('holeAt')) || 0;
+let debugSpawned = false;
 
 // ===== ゲーム状態 =====
 let state = STATE.TITLE;
@@ -56,6 +59,22 @@ let chill = 0;               // 残りms
 let hasGal = false;
 let invuln = 0;              // 被弾後の無敵ms
 let chase = 0;               // ポリス追跡の残りms (追跡中に転ぶと御用)
+let alley = 0;               // 裏ルートの残りms
+let deathReason = '';
+let bestDist = 0;            // 自己ベスト到達距離 (m)
+let bestBeating = false;     // 今ランで自己ベスト距離を越えている
+try { bestDist = parseInt(localStorage.getItem('rap_best_dist') || '0', 10) || 0; } catch (e) {}
+
+// 累計統計 (バッジの条件に使う)
+const DEFAULT_STATS = { plays: 0, cash: 0, bling: 0, nearMiss: 0, escapes: 0, galSaves: 0, alleys: 0, maxDist: 0, maxScore: 0 };
+let stats = { ...DEFAULT_STATS };
+try { stats = { ...DEFAULT_STATS, ...JSON.parse(localStorage.getItem('rap_stats') || '{}') }; } catch (e) {}
+function saveStats() {
+  try { localStorage.setItem('rap_stats', JSON.stringify(stats)); } catch (e) {}
+}
+
+// 今ランの統計 (リザルト表示用)
+let runStats = { nearMiss: 0, cash: 0, escapes: 0 };
 let deadTimer = 0;
 let overAt = 0;              // OVER表示時刻 (連打誤爆防止)
 let hintTimer = 0;
@@ -128,6 +147,7 @@ const DEATH_REASONS = {
   trash: '🗑 ゴミ缶にすっ転んだ',
   sign: '🪧 看板に頭をぶつけた',
   police: '🚔 逃げ切れずポリスに御用',
+  hole: '🕳 工事穴にまっさかさま',
 };
 
 // ===== サウンド (pk/game.js から移植) =====
@@ -549,7 +569,10 @@ function styleBuilding(bd) {
 
 // --- キャラクター生成 (低ポリ・ボックス組み立て) ---
 function makeBackPrintTexture(hoodieColor) {
-  // パーカー背面の「天下」バックプリント
+  // パーカー背面のバックプリント (明るい生地は黒文字にする)
+  const r = (hoodieColor >> 16) & 255, gr = (hoodieColor >> 8) & 255, b = hoodieColor & 255;
+  const bright = r * 0.299 + gr * 0.587 + b * 0.114 > 140;
+  const inkColor = bright ? '#16161c' : '#f2b90c';
   const c = document.createElement('canvas');
   c.width = 128; c.height = 128;
   const g = c.getContext('2d');
@@ -563,13 +586,13 @@ function makeBackPrintTexture(hoodieColor) {
   g.textBaseline = 'middle';
   g.shadowColor = 'rgba(0,0,0,0.8)';
   g.shadowOffsetX = 3; g.shadowOffsetY = 3;
-  g.fillStyle = '#f2b90c';
+  g.fillStyle = inkColor;
   g.fillText('RUN DA', 0, -18);
   g.fillText('CITY', 0, 20);
   g.restore();
   g.font = '900 15px "Archivo Black", sans-serif';
   g.textAlign = 'center';
-  g.fillStyle = '#f2b90c';
+  g.fillStyle = inkColor;
   g.fillText('★ RDC ★', 64, 108);
   return new THREE.CanvasTexture(c);
 }
@@ -585,9 +608,10 @@ function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain, shades, mic, b
     hair: new THREE.MeshLambertMaterial({ color: hair || 0x221a12 }),
   };
   let torso;
+  let backMat = null;
   if (backPrint) {
     // 背面 (+z) だけバックプリントのテクスチャに差し替え
-    const backMat = new THREE.MeshLambertMaterial({ map: makeBackPrintTexture(hoodie) });
+    backMat = new THREE.MeshLambertMaterial({ map: makeBackPrintTexture(hoodie) });
     torso = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), [
       mats.hoodie, mats.hoodie, mats.hoodie, mats.hoodie, backMat, mats.hoodie,
     ]);
@@ -606,12 +630,14 @@ function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain, shades, mic, b
   head.scale.set(0.42, 0.4, 0.42);
   head.position.y = 1.82;
   g.add(head);
+  let capMat = null;
   if (cap) {
-    const capTop = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: capColor }));
+    capMat = new THREE.MeshLambertMaterial({ color: capColor });
+    const capTop = new THREE.Mesh(boxGeo, capMat);
     capTop.scale.set(0.46, 0.14, 0.46);
     capTop.position.y = 2.06;
     g.add(capTop);
-    const brim = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: capColor }));
+    const brim = new THREE.Mesh(boxGeo, capMat);
     brim.scale.set(0.44, 0.05, 0.3);
     // 通常は前方(-z)につば。brimBack なら後ろかぶり
     brim.position.set(0, 2.0, brimBack ? 0.34 : -0.34);
@@ -687,7 +713,7 @@ function makeHumanoid({ hoodie, skin, cap, capColor, hair, chain, shades, mic, b
     g.add(pivot);
     limbs[key] = pivot;
   }
-  return { group: g, limbs };
+  return { group: g, limbs, mats, capMat, backMat };
 }
 
 // キャラの正面は -z (つば・チェーンの向き)。プレイヤーは進行方向(-z)を向くので回転不要
@@ -699,6 +725,116 @@ const rapper = makeHumanoid({
 });
 rapper.micHand = true; // 走行中もマイクを顔の横にキープ
 scene.add(rapper.group);
+
+// ===== スキン & バッジ =====
+const HOODIES = {
+  default: { name: 'パープル', color: 0x3a2b5e },
+  red:     { name: 'ブラッドレッド', color: 0xa02030 },
+  green:   { name: 'カモグリーン', color: 0x2a4a22 },
+  white:   { name: 'アイスホワイト', color: 0xe8e8ee },
+  black:   { name: 'オールブラック', color: 0x141418 },
+  gold:    { name: 'ゴールド', color: 0xf2b90c },
+  king:    { name: 'キングパープル', color: 0x4a0a5e },
+};
+const CAPS = {
+  default: { name: 'ブラック', color: 0x151519 },
+  red:     { name: 'レッド', color: 0xa02030 },
+  white:   { name: 'ホワイト', color: 0xe8e8ee },
+  pink:    { name: 'ピンク', color: 0xd94f9e },
+  gold:    { name: 'ゴールド', color: 0xf2b90c },
+};
+const BADGES = [
+  { id: 'debut',    medal: '🎤', name: 'デビュー',        desc: '初ランを走る',                cond: (s) => s.plays >= 1,      reward: { type: 'hoodie', id: 'red' } },
+  { id: 'hustler',  medal: '💴', name: 'ハスラー',        desc: 'キャッシュ累計300枚',          cond: (s) => s.cash >= 300,     reward: { type: 'hoodie', id: 'green' } },
+  { id: 'dodger',   medal: '😤', name: 'スカし職人',      desc: 'スカし累計100回',              cond: (s) => s.nearMiss >= 100, reward: { type: 'hoodie', id: 'white' } },
+  { id: 'runner',   medal: '🚔', name: '逃走のプロ',      desc: 'ポリスから累計10回逃げ切る',    cond: (s) => s.escapes >= 10,   reward: { type: 'cap', id: 'red' } },
+  { id: 'highway',  medal: '📍', name: 'ハイウェイ進出',   desc: '600m到達',                    cond: (s) => s.maxDist >= 600,  reward: { type: 'cap', id: 'white' } },
+  { id: 'downtown', medal: '📍', name: 'ダウンタウンの顔', desc: '1400m到達',                   cond: (s) => s.maxDist >= 1400, reward: { type: 'hoodie', id: 'black' } },
+  { id: 'skyline',  medal: '🌃', name: 'スカイライン',    desc: '2400m到達',                   cond: (s) => s.maxDist >= 2400, reward: { type: 'hoodie', id: 'gold' } },
+  { id: 'mote',     medal: '💁‍♀️', name: 'モテ期',         desc: 'ギャルに累計10回救われる',      cond: (s) => s.galSaves >= 10,  reward: { type: 'cap', id: 'pink' } },
+  { id: 'alley',    medal: '🕳', name: '裏路地の主',      desc: '裏ルートに累計10回入る',        cond: (s) => s.alleys >= 10,    reward: { type: 'cap', id: 'gold' } },
+  { id: 'king',     medal: '👑', name: 'KING OF DA CITY', desc: 'スコア6,000到達',              cond: (s) => s.maxScore >= 6000, reward: { type: 'hoodie', id: 'king' } },
+];
+
+let equipped = { hoodie: 'default', cap: 'default' };
+try { equipped = { hoodie: 'default', cap: 'default', ...JSON.parse(localStorage.getItem('rap_equip') || '{}') }; } catch (e) {}
+
+function skinUnlocked(type, id) {
+  if (id === 'default') return true;
+  const b = BADGES.find((x) => x.reward.type === type && x.reward.id === id);
+  return b ? b.cond(stats) : false;
+}
+
+function applyEquip() {
+  // 未解禁のものを装備していたらデフォルトに戻す (別端末等)
+  for (const t of ['hoodie', 'cap']) {
+    if (!skinUnlocked(t, equipped[t])) equipped[t] = 'default';
+  }
+  const h = HOODIES[equipped.hoodie] || HOODIES.default;
+  rapper.mats.hoodie.color.setHex(h.color);
+  if (rapper.backMat) {
+    if (rapper.backMat.map) rapper.backMat.map.dispose();
+    rapper.backMat.map = makeBackPrintTexture(h.color);
+    rapper.backMat.needsUpdate = true;
+  }
+  const cp = CAPS[equipped.cap] || CAPS.default;
+  if (rapper.capMat) rapper.capMat.color.setHex(cp.color);
+}
+
+function equipSkin(type, id) {
+  if (!skinUnlocked(type, id)) return;
+  equipped[type] = id;
+  try { localStorage.setItem('rap_equip', JSON.stringify(equipped)); } catch (e) {}
+  applyEquip();
+  renderLocker();
+}
+
+function checkNewBadges() {
+  let seen = [];
+  try { seen = JSON.parse(localStorage.getItem('rap_badges_seen') || '[]'); } catch (e) {}
+  const fresh = BADGES.filter((b) => b.cond(stats) && !seen.includes(b.id));
+  if (fresh.length) {
+    try { localStorage.setItem('rap_badges_seen', JSON.stringify([...seen, ...fresh.map((b) => b.id)])); } catch (e) {}
+  }
+  return fresh;
+}
+
+function renderLocker() {
+  for (const [rowId, defs, type] of [['hoodie-skins', HOODIES, 'hoodie'], ['cap-skins', CAPS, 'cap']]) {
+    const row = document.getElementById(rowId);
+    row.innerHTML = '';
+    for (const [id, def] of Object.entries(defs)) {
+      const unlocked = skinUnlocked(type, id);
+      const chip = document.createElement('button');
+      chip.className = 'skin-chip' + (equipped[type] === id ? ' equipped' : '') + (unlocked ? '' : ' locked');
+      const sw = document.createElement('span');
+      sw.className = 'skin-swatch';
+      sw.style.background = '#' + def.color.toString(16).padStart(6, '0');
+      const nm = document.createElement('span');
+      nm.className = 'skin-name';
+      nm.textContent = unlocked ? def.name : '???';
+      chip.appendChild(sw);
+      chip.appendChild(nm);
+      chip.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (unlocked) { equipSkin(type, id); playTap(); }
+      });
+      row.appendChild(chip);
+    }
+  }
+  const bWrap = document.getElementById('badges');
+  bWrap.innerHTML = '';
+  for (const b of BADGES) {
+    const done = b.cond(stats);
+    const div = document.createElement('div');
+    div.className = 'ach' + (done ? ' done' : ' locked');
+    const rewardDef = b.reward.type === 'hoodie' ? HOODIES[b.reward.id] : CAPS[b.reward.id];
+    const rewardLabel = `${b.reward.type === 'hoodie' ? 'パーカー' : 'キャップ'}「${rewardDef.name}」`;
+    div.innerHTML = `<span class="ach-medal">${b.medal}</span><span class="ach-body"><span class="ach-name">${b.name}</span><span class="ach-desc">${b.desc}</span><span class="ach-reward">🎁 ${rewardLabel}</span></span>`;
+    bWrap.appendChild(div);
+  }
+}
+applyEquip();
 
 // ギャル: 金髪ロング + 日焼け肌 + ピンクトップス + ミニスカ
 const gal = makeHumanoid({ hoodie: 0xff5fb0, skin: 0xc98a5a, cap: false, hair: 0xf5d76e, chain: false });
@@ -830,6 +966,57 @@ function makeTrash() {
   g.add(junk);
   return g;
 }
+function makeHole() {
+  // 工事中の大穴: 落ちたら即死。ジャンプでしか越えられない
+  const g = new THREE.Group();
+  const pit = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.04, 2.4),
+    new THREE.MeshBasicMaterial({ color: 0x020204 })
+  );
+  pit.position.y = 0.02;
+  g.add(pit);
+  // 縁の警告ストライプ
+  const stripe = new THREE.Mesh(
+    new THREE.BoxGeometry(1.9, 0.06, 0.16),
+    new THREE.MeshBasicMaterial({ color: 0xffb020 })
+  );
+  stripe.position.set(0, 0.03, 1.25);
+  g.add(stripe);
+  const stripe2 = stripe.clone();
+  stripe2.position.z = -1.25;
+  g.add(stripe2);
+  // 三角コーン
+  for (const sx of [-0.8, 0.8]) {
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(0.14, 0.4, 8),
+      new THREE.MeshLambertMaterial({ color: 0xff5a2a })
+    );
+    cone.position.set(sx, 0.2, 1.35);
+    g.add(cone);
+  }
+  return g;
+}
+function makeAlleyGate() {
+  // 光るマンホール: 乗ると裏ルートへ
+  const g = new THREE.Group();
+  const lid = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.75, 0.75, 0.06, 16),
+    new THREE.MeshLambertMaterial({ color: 0x3a4a3a, emissive: 0x1a3a1a })
+  );
+  lid.position.y = 0.04;
+  g.add(lid);
+  const ring = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.85, 0.85, 0.03, 16),
+    new THREE.MeshBasicMaterial({ color: 0x50ff88 })
+  );
+  ring.position.y = 0.02;
+  g.add(ring);
+  const label = new THREE.Sprite(makeEmojiTexture ? new THREE.SpriteMaterial({ map: makeEmojiTexture('⬇'), transparent: true }) : undefined);
+  label.scale.set(0.7, 0.7, 1);
+  label.position.y = 1.0;
+  g.add(label);
+  return g;
+}
 function makeSign() {
   const g = new THREE.Group();
   const pole = new THREE.MeshLambertMaterial({ color: 0x555a66 });
@@ -881,8 +1068,8 @@ for (const def of Object.values(ITEM_DEFS)) {
 }
 
 // --- エンティティのプール ---
-const OB_MAKERS = { barricade: makeBarricade, hater: makeHater, trash: makeTrash, sign: makeSign };
-const pools = { barricade: [], hater: [], trash: [], sign: [], cash: [], mic: [], weed: [], bling: [], gal: [] };
+const OB_MAKERS = { barricade: makeBarricade, hater: makeHater, trash: makeTrash, sign: makeSign, hole: makeHole, alley: makeAlleyGate };
+const pools = { barricade: [], hater: [], trash: [], sign: [], hole: [], alley: [], cash: [], mic: [], weed: [], bling: [], gal: [] };
 
 function acquireMesh(type) {
   const pool = pools[type];
@@ -963,6 +1150,38 @@ function makeMarkerMesh(name) {
   return g;
 }
 
+// ===== 自己ベストライン =====
+let bestLineSpawned = false;
+const goldAura = new THREE.PointLight(0xf2b90c, 0, 9);
+scene.add(goldAura);
+
+function spawnBestLine() {
+  const g = new THREE.Group();
+  const line = new THREE.Mesh(
+    new THREE.BoxGeometry(LANE_W * 3, 0.05, 0.3),
+    new THREE.MeshBasicMaterial({ color: 0xf2b90c, transparent: true, opacity: 0.75 })
+  );
+  line.position.y = 0.03;
+  g.add(line);
+  const c = document.createElement('canvas');
+  c.width = 320; c.height = 72;
+  const gg = c.getContext('2d');
+  gg.textAlign = 'center';
+  gg.shadowColor = 'rgba(0,0,0,0.9)';
+  gg.shadowBlur = 6;
+  gg.font = '900 28px "M PLUS 1p", sans-serif';
+  gg.fillStyle = '#f2b90c';
+  gg.fillText('🏁 前回のお前はここまで', 160, 44);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+  sp.scale.set(3.4, 0.77, 1);
+  sp.position.y = 1.6;
+  g.add(sp);
+  const z = bestDist - distance;
+  g.position.set(0, 0, -z);
+  scene.add(g);
+  entities.push({ kind: 'bestline', type: 'bestline', lane: 99, z, mesh: g, dead: false });
+}
+
 function spawnMarker(m) {
   if (DEBUG_PARAMS.has('debug')) console.log('[spawnMarker]', m.name, m.dist, 'at dist', Math.floor(distance));
   const mesh = makeMarkerMesh(m.name);
@@ -990,13 +1209,17 @@ const HARD_PATTERNS = [
   'ttt', 'sss', 'tts', 'stt',
   'bts', 'stb', 'hts', 'sth', 'bst', 'tsb',
 ];
-const TYPE_OF = { b: 'barricade', h: 'hater', t: 'trash', s: 'sign' };
+const TYPE_OF = { b: 'barricade', h: 'hater', t: 'trash', s: 'sign', o: 'hole' };
+// o=穴 は300mから登場。落ちたら救済なしの即死
+const HOLE_PATTERNS = ['onn', 'non', 'nno'];
+const HOLE_MID_PATTERNS = ['onb', 'bno', 'onh', 'hno', 'ont', 'tno', 'ons', 'sno'];
 
 function pickPattern() {
   // <250m: 単体のみ / <700m: 単体+2個 / それ以降: 全部
   const pool = [...EASY_PATTERNS];
   if (distance > 250) pool.push(...MID_PATTERNS);
-  if (distance > 700) pool.push(...MID_PATTERNS, ...HARD_PATTERNS);
+  if (distance > 300) pool.push(...HOLE_PATTERNS);
+  if (distance > 700) pool.push(...MID_PATTERNS, ...HARD_PATTERNS, ...HOLE_MID_PATTERNS);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -1029,6 +1252,13 @@ function spawnRow(z) {
     const roll = Math.random();
     const type = roll < 0.3 ? 'mic' : roll < 0.55 ? 'weed' : roll < 0.8 ? 'bling' : 'gal';
     spawnItem(type, lane, z + 5.5);
+  }
+  // 裏ルート入口 (光るマンホール): たまに出る
+  if (openLanes.length && distance > 250 && Math.random() < 0.08) {
+    const lane = openLanes[Math.floor(Math.random() * openLanes.length)];
+    const mesh = acquireMesh('alley');
+    mesh.position.set(lane * LANE_W, 0, -(z + 9));
+    entities.push({ kind: 'gate', type: 'alley', lane, z: z + 9, mesh, dead: false });
   }
 }
 
@@ -1078,7 +1308,15 @@ function beginGame() {
   copX = 0;
   player.lane = 0; player.x = 0; player.y = 0; player.vy = 0;
   player.sliding = 0; player.jumping = false;
-  rapper.group.rotation.x = 0;
+  alley = 0;
+  scene.fog.near = 25;
+  scene.fog.far = 85;
+  bestBeating = false;
+  bestLineSpawned = false;
+  runStats = { nearMiss: 0, cash: 0, escapes: 0 };
+  stats.plays++;
+  rapper.group.rotation.set(0, 0, 0);
+  rapper.group.scale.set(1, 1, 1);
   rapper.group.visible = true;
   gal.group.visible = false;
   galX = 0;
@@ -1141,6 +1379,8 @@ function grantItem(type) {
   const mult = multNow();
   if (type === 'cash') {
     cashStreak++;
+    stats.cash++;
+    runStats.cash++;
     const val = 100 * mult * (chill > 0 ? 2 : 1);
     collectPts += val;
     swag = Math.min(100, swag + 4);
@@ -1159,6 +1399,7 @@ function grantItem(type) {
     popText('🍃 チルタイム…');
     playChill();
   } else if (type === 'bling') {
+    stats.bling++;
     const val = 1000 * mult;
     collectPts += val;
     swag = Math.min(100, swag + 40);
@@ -1175,6 +1416,53 @@ function grantItem(type) {
 }
 
 let swagMaxShown = false;
+
+// ===== 裏ルート =====
+function enterAlley() {
+  alley = 4000;
+  stats.alleys++;
+  showBanner('裏ルート!!');
+  popText('🕳 地下に潜った!');
+  if (AC) playRiser(AC.currentTime, 0.5, 0.07);
+  vibrate(30);
+  // チェイス中なら地下でまける
+  if (chase > 0) {
+    chase = 0;
+    stats.escapes++;
+    runStats.escapes++;
+    popText('🚔 裏道でまいた!', 'nice');
+    swag = Math.min(100, swag + 20);
+  }
+  // 進行方向の障害物・ゲートを片付けてキャッシュ天国に
+  for (const e of entities) {
+    if ((e.kind === 'ob' || e.kind === 'gate') && !e.dead && e.z > 1) {
+      e.dead = true;
+      e.mesh.visible = false;
+    }
+  }
+  scene.fog.near = 7;
+  scene.fog.far = 32;
+}
+
+function exitAlley() {
+  alley = 0;
+  showBanner('表通りへ!');
+  if (AC) playRiser(AC.currentTime, 0.4, 0.05);
+  scene.fog.near = 25;
+  scene.fog.far = 85;
+  // 出口はハードな行でお出迎え (リスクとリターン)
+  const pool = distance > 700 ? HARD_PATTERNS : MID_PATTERNS;
+  const pat = pool[Math.floor(Math.random() * pool.length)];
+  for (let i = 0; i < 3; i++) {
+    const ch = pat[i];
+    if (ch === 'n') continue;
+    const type = TYPE_OF[ch];
+    const mesh = acquireMesh(type);
+    const z = spawnedUntil - rowGap() * 0.5;
+    mesh.position.set((i - 1) * LANE_W, 0, -z);
+    entities.push({ kind: 'ob', type, lane: i - 1, z, mesh, dead: false, passed: false });
+  }
+}
 
 function hitObstacle(ob) {
   if (fever > 0) {
@@ -1195,6 +1483,7 @@ function hitObstacle(ob) {
     ob.dead = true;
     ob.vy = 7;
     ob.spin = 5;
+    stats.galSaves++;
     popText('💁‍♀️「キャーッ!!」身代わり!', 'warn');
     playGalScream();
     vibrate(60);
@@ -1219,11 +1508,17 @@ function hitObstacle(ob) {
 
 function die(reason) {
   state = STATE.DEAD;
+  deathReason = reason;
   deadTimer = 950;
   swag = 0;
   fever = 0;
   chill = 0;
   chase = 0;
+  if (alley > 0) {
+    alley = 0;
+    scene.fog.near = 25;
+    scene.fog.far = 85;
+  }
   cop.group.visible = false;
   copLight.intensity = 0;
   tintEl.className = '';
@@ -1240,6 +1535,23 @@ function endGame() {
   if (sc > best) {
     best = sc;
     try { localStorage.setItem('rap_best', String(best)); } catch (e) {}
+  }
+  const distM = Math.floor(distance);
+  if (distM > bestDist) {
+    bestDist = distM;
+    try { localStorage.setItem('rap_best_dist', String(bestDist)); } catch (e) {}
+  }
+  stats.maxDist = Math.max(stats.maxDist, distM);
+  stats.maxScore = Math.max(stats.maxScore, sc);
+  const newBadges = checkNewBadges();
+  saveStats();
+  document.getElementById('run-stats').textContent =
+    `😤 スカし ${runStats.nearMiss} / 💴 ${runStats.cash}枚 / 🚔 逃走 ${runStats.escapes}回`;
+  if (newBadges.length) {
+    setTimeout(() => {
+      for (const b of newBadges) popText(`🎖 バッジ獲得: ${b.medal} ${b.name}!`, 'nice');
+      playBling();
+    }, 600);
   }
   document.getElementById('over-head').textContent = OVER_HEADS[Math.floor(Math.random() * OVER_HEADS.length)];
   rankTitleEl.textContent = rankTitle(sc);
@@ -1258,9 +1570,16 @@ function update(dt) {
 
   if (state === STATE.DEAD) {
     deadTimer -= dt;
-    // 前のめりに転倒
-    rapper.group.rotation.x = Math.min(1.45, rapper.group.rotation.x + dt * 0.006);
-    rapper.group.position.y = Math.max(0.15, rapper.group.position.y - dt * 0.004);
+    if (deathReason === 'hole') {
+      // 穴にまっさかさま
+      rapper.group.position.y -= dt * 0.006;
+      rapper.group.rotation.z += dt * 0.008;
+      rapper.group.scale.multiplyScalar(Math.max(0.9, 1 - dt * 0.0012));
+    } else {
+      // 前のめりに転倒
+      rapper.group.rotation.x = Math.min(1.45, rapper.group.rotation.x + dt * 0.006);
+      rapper.group.position.y = Math.max(0.15, rapper.group.position.y - dt * 0.004);
+    }
     if (deadTimer <= 0) endGame();
     return;
   }
@@ -1283,10 +1602,16 @@ function update(dt) {
     if (chase <= 0) {
       popText('🚔 まいたぜ!', 'nice');
       swag = Math.min(100, swag + 15);
+      stats.escapes++;
+      runStats.escapes++;
     } else if (AC && AC.currentTime - lastSirenT > 1.8) {
       lastSirenT = AC.currentTime;
       playSiren();
     }
+  }
+  if (alley > 0) {
+    alley -= dt * (chill > 0 ? 0.6 : 1);
+    if (alley <= 0) exitAlley();
   }
   if (hintTimer > 0) {
     hintTimer -= dt;
@@ -1314,7 +1639,7 @@ function update(dt) {
   // 画面エフェクト
   const wantTint = fever > 0 ? 'fever' : chill > 0 ? 'chill' : '';
   if (tintEl.className !== wantTint) tintEl.className = wantTint;
-  scene.fog.color.setHex(fever > 0 ? 0x2a1f08 : chill > 0 ? 0x1a0c2e : DISTRICTS[districtIdx].fog);
+  scene.fog.color.setHex(alley > 0 ? 0x06140c : fever > 0 ? 0x2a1f08 : chill > 0 ? 0x1a0c2e : DISTRICTS[districtIdx].fog);
   scene.background.copy(scene.fog.color);
 
   // プレイヤー移動
@@ -1330,11 +1655,39 @@ function update(dt) {
   }
   if (player.sliding > 0) player.sliding -= dt;
 
-  // ワールドを流す + スポーン
+  // ワールドを流す + スポーン (裏ルート中はキャッシュ天国)
   spawnedUntil -= ds;
   while (spawnedUntil < DRAW_DIST) {
     spawnedUntil += rowGap();
-    if (!DEBUG_SAFE) spawnRow(spawnedUntil);
+    if (DEBUG_SAFE) continue;
+    if (alley > 0) {
+      // キャッシュ天国: 2レーンにびっしり
+      const gap = rowGap();
+      const l1 = Math.floor(Math.random() * 3) - 1;
+      const l2 = ((l1 + 2 + Math.floor(Math.random() * 2)) % 3) - 1;
+      const n = Math.max(4, Math.floor(gap / 2));
+      for (let i = 0; i < n; i++) {
+        spawnItem('cash', l1, spawnedUntil - gap + i * 2);
+        if (i % 2 === 0) spawnItem('cash', l2, spawnedUntil - gap + 1 + i * 2);
+      }
+    } else {
+      spawnRow(spawnedUntil);
+    }
+  }
+
+  // 開発用の強制配置
+  if (!debugSpawned && (DEBUG_ALLEY_AT || DEBUG_HOLE_AT) && distance > 5) {
+    debugSpawned = true;
+    if (DEBUG_ALLEY_AT) {
+      const mesh = acquireMesh('alley');
+      mesh.position.set(0, 0, -DEBUG_ALLEY_AT);
+      entities.push({ kind: 'gate', type: 'alley', lane: 0, z: DEBUG_ALLEY_AT, mesh, dead: false });
+    }
+    if (DEBUG_HOLE_AT) {
+      const mesh = acquireMesh('hole');
+      mesh.position.set(0, 0, -DEBUG_HOLE_AT);
+      entities.push({ kind: 'ob', type: 'hole', lane: 0, z: DEBUG_HOLE_AT, mesh, dead: false, passed: false });
+    }
   }
 
   // TOP10の散り際マーカー
@@ -1343,6 +1696,11 @@ function update(dt) {
       m.spawned = true;
       spawnMarker(m);
     }
+  }
+  // 自己ベストライン
+  if (!bestLineSpawned && bestDist > 30 && bestDist - distance < DRAW_DIST && bestDist - distance > 5) {
+    bestLineSpawned = true;
+    spawnBestLine();
   }
 
   for (const b of buildings) {
@@ -1389,6 +1747,23 @@ function update(dt) {
         grantItem(e.type);
         continue;
       }
+      if (e.kind === 'gate') {
+        // マンホールは地上にいる時だけ発動 (ジャンプ中はスルー)
+        if (player.y < 0.3 && alley <= 0) {
+          e.dead = true;
+          e.mesh.visible = false;
+          enterAlley();
+        }
+        continue;
+      }
+      if (e.type === 'hole') {
+        // 穴は問答無用の即死。フィーバーもギャルもポリス救済も効かない
+        if (player.y <= 0.35) {
+          die('hole');
+          return;
+        }
+        continue;
+      }
       // 障害物: 回避条件チェック (無敵中はすり抜け)
       // バリケードは見た目通りジャンプで飛び越せる (ヘイターは人なので不可)
       const avoided =
@@ -1399,6 +1774,17 @@ function update(dt) {
         hitObstacle(e);
         if (state === STATE.DEAD) return;
       }
+    }
+
+    // 自己ベストラインを越えた瞬間
+    if (e.kind === 'bestline' && !e.passed && e.z < 0) {
+      e.passed = true;
+      bestBeating = true;
+      showBanner('自己ベスト更新中!!');
+      popText('🏁 過去の自分、置き去り', 'nice');
+      swag = Math.min(100, swag + 25);
+      playFever();
+      vibrate([30, 20, 60]);
     }
 
     // ライバルの散り際を越えた瞬間
@@ -1418,12 +1804,16 @@ function update(dt) {
       if ((e.type === 'barricade' || e.type === 'hater') && Math.abs(e.lane - playerLane) === 1) {
         swag = Math.min(100, swag + 8);
         popText('NICE! SWAG+', 'nice');
+        stats.nearMiss++;
+        runStats.nearMiss++;
       }
-      if (e.type === 'trash' || e.type === 'sign' || e.type === 'barricade') {
+      if (e.type === 'trash' || e.type === 'sign' || e.type === 'barricade' || e.type === 'hole') {
         // 飛び越え/くぐり成功もSWAG
         if (e.lane === playerLane) {
           swag = Math.min(100, swag + 6);
           popText('COOL!', 'nice');
+          stats.nearMiss++;
+          runStats.nearMiss++;
         }
       }
     }
@@ -1431,8 +1821,8 @@ function update(dt) {
   // 後方へ抜けたエンティティを回収
   entities = entities.filter((e) => {
     if (e.z < -6 || (e.dead && e.kind === 'ob' && e.mesh.position.y < -3) || (e.dead && e.kind === 'item')) {
-      if (e.kind === 'marker') {
-        // マーカーは都度生成なので破棄する
+      if (e.kind === 'marker' || e.kind === 'bestline') {
+        // マーカー類は都度生成なので破棄する
         scene.remove(e.mesh);
         e.mesh.traverse((o) => {
           if (o.material) {
@@ -1524,6 +1914,13 @@ function loop(t) {
       copLight.color.setHex(Math.floor(t / 160) % 2 === 0 ? 0xff2233 : 0x2244ff);
     } else {
       copLight.intensity = 0;
+    }
+    // 自己ベスト更新中の金オーラ
+    if (bestBeating && state === STATE.RUN) {
+      goldAura.position.set(px, 1.6, 0.6);
+      goldAura.intensity = 1.4 + Math.sin(t * 0.012) * 0.5;
+    } else {
+      goldAura.intensity = 0;
     }
   }
 
@@ -1679,6 +2076,105 @@ showRankOverBtn.addEventListener('click', (e) => { e.stopPropagation(); openRank
 rankOverlay.addEventListener('click', (e) => {
   e.stopPropagation();
   rankOverlay.classList.add('hidden');
+});
+
+// ===== ロッカー =====
+const lockerOverlay = document.getElementById('locker-overlay');
+document.getElementById('show-locker').addEventListener('click', (e) => {
+  e.stopPropagation();
+  renderLocker();
+  lockerOverlay.classList.remove('hidden');
+});
+lockerOverlay.addEventListener('click', (e) => {
+  e.stopPropagation();
+  lockerOverlay.classList.add('hidden');
+});
+
+// ===== 結果シェア =====
+async function shareResult() {
+  const sc = totalScore();
+  const distM = Math.floor(distance);
+  const c = document.createElement('canvas');
+  c.width = 1000; c.height = 1250;
+  const g = c.getContext('2d');
+  try { await document.fonts.load('italic 900 100px "Reggae One"'); } catch (e) {}
+  // 背景
+  g.fillStyle = '#0c0c14';
+  g.fillRect(0, 0, 1000, 1250);
+  // 街のシルエット
+  g.fillStyle = '#171722';
+  for (let i = 0; i < 13; i++) {
+    const w = 46 + ((i * 37) % 60);
+    const h = 130 + ((i * 89) % 280);
+    g.fillRect(45 + i * 72, 1180 - h, w, h);
+  }
+  g.fillStyle = 'rgba(255,214,120,0.55)';
+  for (let i = 0; i < 90; i++) {
+    g.fillRect(50 + ((i * 61) % 890), 930 + ((i * 37) % 230), 7, 9);
+  }
+  // 金フレーム
+  g.strokeStyle = '#f2b90c';
+  g.lineWidth = 10;
+  g.strokeRect(28, 28, 944, 1194);
+  // ロゴ
+  g.textAlign = 'center';
+  g.fillStyle = '#ffffff';
+  g.font = 'italic 900 92px "Reggae One", "Archivo Black", sans-serif';
+  g.shadowColor = '#f2b90c';
+  g.shadowOffsetX = 6; g.shadowOffsetY = 6;
+  g.fillText('RUN DA CITY', 500, 165);
+  g.shadowColor = 'transparent';
+  g.shadowOffsetX = 0; g.shadowOffsetY = 0;
+  // 名前
+  g.fillStyle = '#f2b90c';
+  g.font = '900 44px "M PLUS 1p", sans-serif';
+  g.fillText(`MC ${savedName || '???'}`, 500, 300);
+  // スコア
+  g.fillStyle = 'rgba(244,242,251,0.7)';
+  g.font = '800 34px "M PLUS 1p", sans-serif';
+  g.fillText('SCORE', 500, 400);
+  g.fillStyle = '#ffffff';
+  g.font = '900 150px "Archivo Black", "M PLUS 1p", sans-serif';
+  g.fillText(scoreLabel(sc), 500, 545);
+  // 称号
+  g.fillStyle = '#f2b90c';
+  g.font = 'italic 900 58px "Reggae One", "M PLUS 1p", sans-serif';
+  g.fillText(rankTitle(sc), 500, 680);
+  // 統計
+  g.fillStyle = 'rgba(244,242,251,0.85)';
+  g.font = '800 32px "M PLUS 1p", sans-serif';
+  g.fillText(`🏃 ${scoreLabel(distM)}m  😤 スカし${runStats.nearMiss}  🚔 逃走${runStats.escapes}`, 500, 770);
+  // マイク
+  g.font = '110px serif';
+  g.fillText('🎤', 500, 900);
+  // URL
+  g.fillStyle = 'rgba(244,242,251,0.6)';
+  g.font = '800 30px "M PLUS 1p", sans-serif';
+  g.fillText('オヤユビ帝国 /rap/ で天下を獲れ', 500, 1160);
+
+  if (DEBUG_PARAMS.has('debug')) window.__shareCanvas = c;
+  const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
+  if (!blob) return;
+  const file = new File([blob], 'run-da-city.png', { type: 'image/png' });
+  const text = `RUN DA CITY: ${scoreLabel(sc)}点で「${rankTitle(sc)}」になった🎤 お前も天下獲ってみろ`;
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], text });
+      return;
+    } catch (e) { /* キャンセル時はフォールバックへ */ }
+  }
+  // フォールバック: 画像をダウンロード
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'run-da-city.png';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  popText('📸 画像を保存した!');
+}
+
+document.getElementById('share-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  shareResult();
 });
 
 // ===== 起動 =====
