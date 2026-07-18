@@ -6,6 +6,7 @@
     "dev": "node dev-server.mjs"
   },
   "dependencies": {
-    "@upstash/redis": "^1.35.0"
+    "@upstash/redis": "^1.35.0",
+    "three": "^0.185.1"
   }
 }

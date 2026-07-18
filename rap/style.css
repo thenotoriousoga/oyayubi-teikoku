@@ -1,0 +1,518 @@
+:root {
+  --street-night: #0c0c14;
+  --neon-purple: #7b2ff7;
+  --floodlight: #f4f2fb;
+  --gold: #f2b90c;
+  --danger: #ff5a48;
+  --ink: #0c0c0e;
+  --font-logo: 'Archivo Black', sans-serif;
+  --font-display: 'M PLUS 1p', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-pop: 'Mochiy Pop One', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --font-body: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--street-night);
+  touch-action: none;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-body);
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ===== 画面全体の色エフェクト (フィーバー/チル) ===== */
+#tint {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+#tint.fever {
+  opacity: 1;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(242, 185, 12, 0.28) 100%);
+}
+
+#tint.chill {
+  opacity: 1;
+  background: radial-gradient(ellipse at center, rgba(123, 47, 247, 0.08) 30%, rgba(90, 20, 160, 0.35) 100%);
+}
+
+/* ===== スコアポップ ===== */
+.pop-text {
+  position: fixed;
+  left: 50%;
+  top: 58%;
+  transform: translateX(-50%);
+  font-family: var(--font-pop);
+  font-size: 20px;
+  color: var(--gold);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 6;
+  animation: pop-float 0.8s ease-out forwards;
+  white-space: nowrap;
+}
+
+.pop-text.nice {
+  color: #7df0ff;
+}
+
+.pop-text.warn {
+  color: var(--danger);
+}
+
+@keyframes pop-float {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.6); }
+  20%  { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-46px) scale(1); }
+}
+
+/* ===== SWAGゲージ ===== */
+#swag-wrap {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 52px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(62vw, 260px);
+  height: 12px;
+  background: rgba(8, 6, 16, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#swag-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f2b90c, #ffe27a);
+  border-radius: 999px;
+  transition: width 0.15s linear;
+}
+
+#swag-wrap.max #swag-bar {
+  background: linear-gradient(90deg, #ff5a48, #f2b90c, #ffe27a);
+}
+
+/* ===== HUD ===== */
+#hud {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  row-gap: 6px;
+  padding: 0 10px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hud-item {
+  background: rgba(8, 6, 16, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--floodlight);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 11px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.hud-item span {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--gold);
+}
+
+/* 効果アイコン(アイテムの残り時間) */
+#fx-hud {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 46px);
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.fx-chip {
+  background: rgba(8, 6, 16, 0.7);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.fx-chip.chill {
+  border-color: var(--neon-purple);
+  color: #c9a6ff;
+}
+
+/* ===== バナー・ヒント ===== */
+#banner {
+  position: fixed;
+  top: 30%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-logo);
+  font-style: italic;
+  font-size: clamp(34px, 10.5vw, 66px);
+  color: var(--gold);
+  -webkit-text-stroke: 2px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+}
+
+#banner.pop {
+  animation: banner-pop 0.9s ease-out forwards;
+}
+
+@keyframes banner-pop {
+  0%   { opacity: 0; transform: scale(0.3); }
+  18%  { opacity: 1; transform: scale(1.15); }
+  30%  { transform: scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+#hint {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--floodlight);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#hint.show {
+  opacity: 1;
+}
+
+/* ===== オーバーレイ共通 ===== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  background: rgba(8, 6, 16, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: var(--floodlight);
+  text-align: center;
+  z-index: 10;
+  padding: 24px;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.eyebrow {
+  font-family: var(--font-logo);
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.logo {
+  font-family: var(--font-logo);
+  font-style: italic;
+  font-size: clamp(54px, 18vw, 100px);
+  line-height: 1.05;
+  color: #fff;
+  letter-spacing: -0.02em;
+  text-shadow:
+    4px 4px 0 var(--gold),
+    8px 8px 0 rgba(0, 0, 0, 0.85);
+}
+
+.logo-sub {
+  font-family: var(--font-display);
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: 0.3em;
+}
+
+.rules {
+  font-size: 14px;
+  line-height: 2;
+  color: rgba(244, 242, 251, 0.88);
+}
+
+.rules b {
+  color: var(--gold);
+}
+
+/* ===== 結果画面 ===== */
+.overlay h2 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 8.5vw, 48px);
+  color: var(--danger);
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+#over-reason {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(244, 242, 251, 0.85);
+}
+
+.rank-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(242, 185, 12, 0.1);
+  border: 2px dashed rgba(242, 185, 12, 0.5);
+  border-radius: 14px;
+  padding: 12px 28px;
+}
+
+.rank-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: rgba(242, 185, 12, 0.8);
+}
+
+#rank-title {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 6.5vw, 32px);
+  color: var(--gold);
+}
+
+.over-score {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.over-score span {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--gold);
+  margin-left: 4px;
+}
+
+.over-best {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(244, 242, 251, 0.7);
+}
+
+.over-best span {
+  font-weight: 800;
+  color: var(--floodlight);
+}
+
+#over-comment {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(244, 242, 251, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 7px 18px;
+}
+
+.tap-label {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--gold);
+  animation: tap-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes tap-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+/* ===== ボタン・入力 ===== */
+.rank-btn {
+  background: #141416;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  color: var(--floodlight);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 800;
+  padding: 10px 24px;
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.rank-btn:active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.entry-row {
+  display: flex;
+  gap: 8px;
+}
+
+#name-input {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 800;
+  padding: 11px 14px;
+  border: 2px solid rgba(242, 185, 12, 0.6);
+  border-radius: 12px;
+  text-align: center;
+  user-select: text;
+  -webkit-user-select: text;
+  background: rgba(255, 255, 255, 0.95);
+  width: 220px;
+}
+
+.start-btns {
+  display: flex;
+  gap: 10px;
+}
+
+#back-portal {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(244, 242, 251, 0.55);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(244, 242, 251, 0.3);
+  padding-bottom: 2px;
+}
+
+#back-portal:active {
+  color: var(--gold);
+}
+
+#top10-badge {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 18px;
+  color: #1a1503;
+  background: var(--gold);
+  border: 2px solid #1a1503;
+  border-radius: 10px;
+  padding: 9px 22px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.75);
+  transform: rotate(-2deg);
+  animation: badge-pop 0.5s cubic-bezier(0.2, 2, 0.4, 1) both;
+}
+
+#top10-badge.hidden {
+  display: none;
+}
+
+@keyframes badge-pop {
+  0%   { transform: scale(0.2); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== ランキング ===== */
+#rank-overlay {
+  background: rgba(8, 6, 16, 0.95);
+}
+
+.rank-heading {
+  font-family: var(--font-display);
+  color: var(--gold) !important;
+}
+
+.rank-sub {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(244, 242, 251, 0.65);
+  margin-top: -8px;
+}
+
+#rank-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+#rank-list li {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 16px;
+  text-align: left;
+}
+
+#rank-list li.me {
+  background: rgba(242, 185, 12, 0.22);
+  border-color: var(--gold);
+}
+
+#rank-list li.rank-loading {
+  text-align: center;
+  font-weight: 400;
+  color: rgba(244, 242, 251, 0.75);
+  background: none;
+}
+
+/* ===== アクセシビリティ ===== */
+button:focus-visible, input:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* 重量級ゴシックにはウェイト指定が必要 (M PLUS 1p は800/900のみ読込) */
+.hud-item span, .logo-sub, #rank-title, .over-score span,
+.rank-heading, .overlay h2 {
+  font-weight: 900;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tap-label {
+    animation: none;
+  }
+}

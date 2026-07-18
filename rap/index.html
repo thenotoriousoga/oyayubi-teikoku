@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0c0c14">
+  <title>天下ラン</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Mochiy+Pop+One&family=M+PLUS+1p:wght@800;900&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": { "three": "./lib/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="tint"></div>
+
+  <div id="hud">
+    <div class="hud-item">🏃 <span id="dist">0m</span></div>
+    <div class="hud-item">💰 <span id="score">0</span></div>
+    <div class="hud-item"><span id="mult">×1</span></div>
+    <div class="hud-item">ベスト <span id="best">—</span></div>
+  </div>
+  <div id="fx-hud"></div>
+  <div id="swag-wrap"><div id="swag-bar"></div></div>
+
+  <div id="banner"></div>
+  <div id="hint">← → スワイプでレーン / ↑ ジャンプ / ↓ スライド</div>
+
+  <div id="start-overlay" class="overlay">
+    <div class="eyebrow">FROM THE BOTTOM TO THE TOP</div>
+    <h1 class="logo">天下ラン</h1>
+    <p class="logo-sub">ストリートから頂点へ</p>
+    <p class="rules">夜の街を駆け抜けろ。<b>スワイプ</b>でかわし、<b>キャッシュ</b>を掴め。<br>🎤 マイクでフィーバー、🍃 でチルタイム、<br>💎 ブリンブリンでSWAG爆上げ、👩 は身代わりになってくれる。</p>
+    <div class="entry-row">
+      <input id="name-input" maxlength="10" placeholder="MCネーム (10文字まで)" autocomplete="off">
+    </div>
+    <div class="start-btns">
+      <button id="show-rank-start" class="rank-btn">🏆 天下ランキング</button>
+    </div>
+    <div class="tap-label" id="start-tap">タップでラン開始</div>
+    <a id="back-portal" href="/">← ゲームせんたくに戻る</a>
+  </div>
+
+  <div id="over-overlay" class="overlay hidden">
+    <h2 id="over-head">ここでビートが止まる…</h2>
+    <p id="over-reason"></p>
+    <div class="rank-title-wrap">
+      <span class="rank-eyebrow">キミの称号</span>
+      <div id="rank-title">路上の卵</div>
+    </div>
+    <div class="over-score">記録 <span id="over-score">—</span></div>
+    <div class="over-best">ベスト <span id="over-best">—</span></div>
+    <div id="over-comment"></div>
+    <div id="top10-badge" class="hidden">👑 天下TOP10入り!</div>
+    <div class="start-btns">
+      <button id="show-rank-over" class="rank-btn">ランキングを見る</button>
+      <button id="back-title" class="rank-btn">タイトルへ</button>
+    </div>
+    <div class="tap-label" id="over-tap">タップで再挑戦</div>
+  </div>
+
+  <div id="rank-overlay" class="overlay hidden">
+    <h2 class="rank-heading">👑 天下ランキング</h2>
+    <p class="rank-sub">最も遠くまで駆け上がった者たち TOP10</p>
+    <ol id="rank-list"></ol>
+    <div class="tap-label">タップで閉じる</div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
