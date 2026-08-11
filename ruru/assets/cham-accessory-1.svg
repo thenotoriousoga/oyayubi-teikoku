@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="scarf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e0405a"/>
+      <stop offset="100%" stop-color="#b52c42"/>
+    </linearGradient>
+  </defs>
+  <path d="M 176,148 Q 210,150 226,168 Q 214,182 194,182 Q 178,180 172,162 Z" fill="url(#scarf)"/>
+  <path d="M 210,178 Q 218,196 210,212 Q 200,206 202,188 Z" fill="url(#scarf)"/>
+  <circle cx="188" cy="160" r="3" fill="#fff" opacity="0.85"/>
+  <circle cx="202" cy="168" r="3" fill="#fff" opacity="0.85"/>
+  <circle cx="196" cy="176" r="3" fill="#fff" opacity="0.85"/>
+  <circle cx="212" cy="160" r="3" fill="#fff" opacity="0.85"/>
+</svg>

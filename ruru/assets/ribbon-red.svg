@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff6b81"/>
+      <stop offset="100%" stop-color="#d63a52"/>
+    </linearGradient>
+  </defs>
+  <path d="M 207,90 L 182,74 Q 176,72 178,80 L 186,90 L 178,100 Q 176,108 182,106 Z" fill="url(#ribbon)"/>
+  <path d="M 207,90 L 232,74 Q 238,72 236,80 L 228,90 L 236,100 Q 238,108 232,106 Z" fill="url(#ribbon)"/>
+  <path d="M 200,86 Q 195,100 199,112 L 207,104 Z" fill="url(#ribbon)" opacity="0.9"/>
+  <circle cx="207" cy="90" r="8" fill="#d63a52"/>
+</svg>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#fbeee0">
+  <title>るる vs チャム</title>
+  <meta name="description" content="ヨークシャテリアの子犬るるを育てて、ライバルのフレンチブルドッグ・チャムに挑め。たまごっち風のお世話と、コマンド式バトル。">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐶</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="hud-home" class="hud-panel">
+      <div class="stage-row">
+        <span class="stage-badge" id="stage-badge">こいぬ</span>
+        <span class="hud-item"><span id="affection">💗 0</span></span>
+        <span class="hud-item"><span id="wins-lifetime">累計 0勝</span></span>
+      </div>
+      <div class="meter-row">
+        <div class="meter"><span class="meter-icon">🍖</span><div class="meter-track"><div class="meter-fill hunger" id="m-hunger"></div></div></div>
+        <div class="meter"><span class="meter-icon">😊</span><div class="meter-track"><div class="meter-fill happy" id="m-happy"></div></div></div>
+        <div class="meter"><span class="meter-icon">🛁</span><div class="meter-track"><div class="meter-fill clean" id="m-clean"></div></div></div>
+        <div class="meter"><span class="meter-icon">⚡</span><div class="meter-track"><div class="meter-fill energy" id="m-energy"></div></div></div>
+      </div>
+    </div>
+    <div id="hud-battle" class="hud-panel hidden">
+      <div class="hp-row">
+        <span class="hp-name" id="ruru-name">るる</span>
+        <div class="hp-track"><div class="hp-fill" id="hp-ruru"></div></div>
+      </div>
+      <div class="hp-row">
+        <span class="hp-name" id="cham-name">チャム</span>
+        <div class="hp-track"><div class="hp-fill enemy" id="hp-cham"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+
+  <div id="home-actions" class="hidden">
+    <button id="act-food" class="care-btn"><span class="care-emoji">🍖</span><span class="care-label">ごはん</span></button>
+    <button id="act-play" class="care-btn"><span class="care-emoji">🎾</span><span class="care-label">あそぶ</span></button>
+    <button id="act-walk" class="care-btn"><span class="care-emoji">🚶</span><span class="care-label">おさんぽ</span></button>
+    <button id="act-pet" class="care-btn"><span class="care-emoji">🖐️</span><span class="care-label">なでる</span></button>
+    <button id="act-sleep" class="care-btn"><span class="care-emoji">💤</span><span class="care-label" id="sleep-label">ねかせる</span></button>
+    <button id="go-battle" class="battle-btn" disabled>⚔️<span id="battle-btn-label">チャムに挑戦</span></button>
+  </div>
+
+  <div id="battle-menu" class="hidden">
+    <div id="battle-log"></div>
+    <div class="move-grid">
+      <button class="move-btn hidden" id="move-0"></button>
+      <button class="move-btn hidden" id="move-1"></button>
+      <button class="move-btn hidden" id="move-2"></button>
+      <button class="move-btn hidden" id="move-3"></button>
+    </div>
+    <div class="move-extra">
+      <button id="move-guard" class="move-btn guard-btn">🛡️ まもる</button>
+      <button id="retreat" class="move-btn retreat-btn hidden">🏠 ひとやすみ</button>
+    </div>
+  </div>
+
+  <div id="start-overlay" class="overlay">
+    <div class="eyebrow">PUPPY VS RIVAL</div>
+    <h1 class="logo">るる <span class="logo-vs">vs</span> チャム</h1>
+    <p class="logo-sub">🐶 そだてて、たたかえ 🐾</p>
+    <p class="rules">
+      ヨークシャテリアの<b>るる</b>をお世話して育て、<br>
+      ライバルの<b>チャム</b>に<b>コマンドバトル</b>で挑もう。<br>
+      ごはん・あそぶ・おさんぽ・なでる・ねかせるで<br>
+      るるはすくすく育つ。放っておくとしょんぼりするので注意!
+    </p>
+    <div class="entry-row">
+      <input id="name-input" maxlength="10" placeholder="おなまえ (10文字まで)" autocomplete="off">
+    </div>
+    <div class="start-btns">
+      <button id="show-rank-start" class="rank-btn">🏆 バトル記録</button>
+    </div>
+    <div class="tap-label">タップで、るるとくらそう</div>
+    <a id="back-portal" href="/">← ゲームせんたくに戻る</a>
+  </div>
+
+  <div id="over-overlay" class="overlay hidden">
+    <h2 id="over-head">チャムに挑戦</h2>
+    <div class="rank-title-wrap">
+      <span class="rank-eyebrow">るるの称号</span>
+      <div id="rank-title">みならいこいぬ</div>
+    </div>
+    <div class="over-score"><span id="over-wins">0</span> 連勝</div>
+    <div class="over-best">ベスト <span id="over-best">—</span> 連勝</div>
+    <div id="over-comment">まだまだこれから、次はもっとやれる</div>
+    <div id="top10-badge" class="hidden">🌏 みんなのTOP10入り!</div>
+    <div class="start-btns">
+      <button id="retry-battle" class="rank-btn primary">⚔️ もういちど</button>
+      <button id="go-home" class="rank-btn">🏠 ホームへ</button>
+    </div>
+    <div class="start-btns">
+      <button id="show-rank-over" class="rank-btn">🏆 バトル記録</button>
+    </div>
+  </div>
+
+  <div id="rank-overlay" class="overlay hidden">
+    <h2 class="rank-heading">🏆 バトル記録</h2>
+    <p class="rank-sub">いちばん連勝した子たち TOP10</p>
+    <ol id="rank-list"></ol>
+    <div class="tap-label">タップで閉じる</div>
+  </div>
+
+  <script src="game.js" defer></script>
+</body>
+</html>

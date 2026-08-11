@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="furBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5b6a80"/>
+      <stop offset="100%" stop-color="#8b98ab"/>
+    </linearGradient>
+    <linearGradient id="furBlueDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#454f60"/>
+      <stop offset="100%" stop-color="#6b7891"/>
+    </linearGradient>
+    <linearGradient id="furTan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d1a765"/>
+      <stop offset="100%" stop-color="#f2d29a"/>
+    </linearGradient>
+    <linearGradient id="furTanDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b8894f"/>
+      <stop offset="100%" stop-color="#dcb277"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="150" cy="266" rx="58" ry="10" fill="#000" opacity="0.15"/>
+
+  <path d="M 108,168 Q 82,148 90,116 Q 94,103 106,109 Q 102,126 108,142 Q 113,156 108,168 Z" fill="url(#furBlueDark)"/>
+
+  <ellipse cx="116" cy="242" rx="11" ry="18" fill="url(#furTan)"/>
+  <ellipse cx="142" cy="245" rx="11" ry="17" fill="url(#furTan)"/>
+
+  <path d="M 90,182 C 86,150 106,128 145,128 C 183,128 200,150 197,182 C 193,208 168,222 143,222 C 113,222 94,206 90,182 Z" fill="url(#furBlue)"/>
+
+  <ellipse cx="162" cy="196" rx="32" ry="27" fill="url(#furTan)"/>
+
+  <ellipse cx="172" cy="240" rx="11" ry="19" fill="url(#furTan)"/>
+  <ellipse cx="193" cy="238" rx="11" ry="18" fill="url(#furTan)"/>
+  <ellipse cx="172" cy="257" rx="12" ry="6" fill="#f6e3c2"/>
+  <ellipse cx="193" cy="255" rx="12" ry="6" fill="#f6e3c2"/>
+
+  <path d="M 178,116 C 181,99 224,96 235,119 C 240,132 229,146 214,148 C 198,150 185,140 178,127 Z" fill="url(#furBlue)"/>
+
+  <circle cx="203" cy="150" r="46" fill="url(#furTan)"/>
+
+  <path d="M 186,124 Q 179,105 192,95 Q 202,102 199,123 Q 193,130 186,124 Z" fill="url(#furBlueDark)"/>
+  <path d="M 220,118 Q 226,98 240,100 Q 245,116 231,128 Q 224,126 220,118 Z" fill="url(#furBlueDark)"/>
+
+  <ellipse cx="228" cy="167" rx="17" ry="13" fill="url(#furTanDark)"/>
+  <ellipse cx="242" cy="165" rx="5.5" ry="4.5" fill="#2b2320"/>
+  <path d="M 231,176 Q 236,181 241,177" stroke="#2b2320" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <circle cx="189" cy="146" r="8" fill="#241a14"/>
+  <circle cx="191.6" cy="143" r="2.4" fill="#fff"/>
+  <circle cx="216" cy="144" r="8.5" fill="#241a14"/>
+  <circle cx="218.6" cy="140.8" r="2.6" fill="#fff"/>
+
+  <path d="M 190,122 Q 184,136 190,147" stroke="url(#furTan)" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M 222,118 Q 228,130 224,142" stroke="url(#furTan)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+  <ellipse cx="205" cy="104" rx="13" ry="9" fill="url(#furTan)"/>
+</svg>

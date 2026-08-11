@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="furBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5b6a80"/>
+      <stop offset="100%" stop-color="#8b98ab"/>
+    </linearGradient>
+    <linearGradient id="furBlueDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#454f60"/>
+      <stop offset="100%" stop-color="#6b7891"/>
+    </linearGradient>
+    <linearGradient id="furTan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d1a765"/>
+      <stop offset="100%" stop-color="#f2d29a"/>
+    </linearGradient>
+    <linearGradient id="furTanDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b8894f"/>
+      <stop offset="100%" stop-color="#dcb277"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="152" cy="228" rx="92" ry="15" fill="#000" opacity="0.15"/>
+
+  <path d="M 66,192 C 62,160 90,132 150,132 C 208,132 236,160 232,196 C 228,222 190,236 148,236 C 104,236 70,222 66,192 Z" fill="url(#furBlue)"/>
+
+  <ellipse cx="150" cy="222" rx="70" ry="26" fill="url(#furTan)" opacity="0.85"/>
+
+  <path d="M 84,196 Q 96,206 92,220" stroke="#4a5566" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/>
+  <path d="M 200,190 Q 212,200 208,214" stroke="#4a5566" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/>
+
+  <ellipse cx="70" cy="222" rx="14" ry="9" fill="url(#furTan)"/>
+
+  <path d="M 208,150 Q 222,166 216,186 Q 206,192 198,180 Q 202,164 208,150 Z" fill="url(#furBlueDark)"/>
+
+  <circle cx="222" cy="172" r="40" fill="url(#furTan)"/>
+
+  <path d="M 205,148 Q 214,128 228,132 Q 234,148 222,162 Z" fill="url(#furBlueDark)"/>
+
+  <ellipse cx="246" cy="182" rx="15" ry="12" fill="url(#furTanDark)"/>
+  <ellipse cx="259" cy="181" rx="5" ry="4" fill="#2b2320"/>
+
+  <path d="M 206,166 Q 213,170 220,166" stroke="#241a14" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M 226,164 Q 233,168 240,164" stroke="#241a14" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+  <ellipse cx="222" cy="132" rx="12" ry="8" fill="url(#furTan)"/>
+</svg>

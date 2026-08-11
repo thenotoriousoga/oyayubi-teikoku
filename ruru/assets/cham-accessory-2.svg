@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="jersey" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a5fd9"/>
+      <stop offset="100%" stop-color="#5b7cf0"/>
+    </linearGradient>
+  </defs>
+  <path d="M 86,190 Q 90,160 130,152 L 140,168 Q 106,176 100,206 Z" fill="url(#jersey)"/>
+  <path d="M 205,186 Q 200,158 165,150 L 158,166 Q 190,174 197,202 Z" fill="url(#jersey)"/>
+  <path d="M 120,158 Q 150,150 178,160 L 174,176 Q 148,168 124,174 Z" fill="#fff" opacity="0.85"/>
+  <text x="148" y="205" font-family="Arial, sans-serif" font-weight="900" font-size="26" fill="#fff" text-anchor="middle" opacity="0.9">7</text>
+</svg>

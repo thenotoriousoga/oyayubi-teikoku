@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <linearGradient id="battle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e0405a"/>
+      <stop offset="100%" stop-color="#b52c42"/>
+    </linearGradient>
+  </defs>
+  <path d="M 180,108 Q 222,96 262,112 L 258,128 Q 222,114 184,124 Z" fill="url(#battle)"/>
+  <path d="M 258,112 L 274,104 L 270,120 L 278,128 L 260,126 Z" fill="url(#battle)"/>
+
+  <rect x="98" y="230" width="24" height="14" rx="6" fill="url(#battle)"/>
+  <rect x="164" y="228" width="24" height="14" rx="6" fill="url(#battle)"/>
+
+  <path d="M 72,150 L 80,138 L 86,150 L 80,146 Z" fill="#ffb03a"/>
+  <path d="M 250,190 L 258,178 L 264,190 L 258,186 Z" fill="#ffb03a"/>
+</svg>
