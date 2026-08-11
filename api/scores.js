@@ -5,6 +5,7 @@ const GAMES = {
   pk:   { key: 'pk:ranking:v2',   max: 999 },
   rap:  { key: 'rap:ranking:v1',  max: 9_999_999 },
   cake: { key: 'cake:ranking:v1', max: 999 },
+  kick: { key: 'kick:ranking:v1', max: 999 },
 };
 
 const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;

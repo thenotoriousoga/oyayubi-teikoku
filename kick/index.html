@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#150a0b">
+  <title>ワンタップ道場</title>
+  <meta name="description" content="パンチ、キック、ガード、かわす。指一本でリングに立て。雑魚から伝説まで殴り抜いて頂点へ。">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥊</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div class="hud-item"><span id="ko">0 体撃破</span></div>
+    <div class="hud-item target-item"><span id="foe">🥊</span></div>
+    <div class="hud-item">ベスト <span id="best">—</span></div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+
+  <div id="start-overlay" class="overlay">
+    <div class="eyebrow">ONE TAP DOJO</div>
+    <h1 class="logo">ワンタップ道場</h1>
+    <p class="logo-sub">🥊 指一本で、殴り上がれ 🥊</p>
+    <p class="rules">
+      <b>タップ</b>でパンチ、<b>上スワイプ</b>でキック。<br>
+      <b>押しっぱなし</b>でガード、<b>左右スワイプ</b>でかわす。<br>
+      オレンジの予兆は<b>パンチ</b>、赤の予兆は<b>キック</b>。<br>
+      隙(緑)を見つけたら思いきり打ち込め!
+    </p>
+    <div class="entry-row">
+      <input id="name-input" maxlength="10" placeholder="おなまえ (10文字まで)" autocomplete="off">
+    </div>
+    <div class="start-btns">
+      <button id="show-rank-start" class="rank-btn">🏆 チャンピオン殿堂</button>
+    </div>
+    <div class="tap-label">タップでゴングを鳴らせ</div>
+    <a id="back-portal" href="/">← ゲームせんたくに戻る</a>
+  </div>
+
+  <div id="over-overlay" class="overlay hidden">
+    <h2 id="over-head">リングに沈んだ…</h2>
+    <div class="rank-title-wrap">
+      <span class="rank-eyebrow">キミの称号</span>
+      <div id="rank-title">サンドバッグ見習い</div>
+    </div>
+    <div class="over-score"><span id="over-ko">0</span> 体撃破</div>
+    <div class="over-best">ベスト <span id="over-best">—</span></div>
+    <div id="over-comment">まだまだこれから、次はもっとやれる</div>
+    <div id="top10-badge" class="hidden">🌏 みんなのTOP10入り!</div>
+    <div class="start-btns">
+      <button id="show-rank-over" class="rank-btn">殿堂を見る</button>
+      <button id="back-title" class="rank-btn">タイトルへ</button>
+    </div>
+    <div class="tap-label">タップでリベンジ</div>
+  </div>
+
+  <div id="rank-overlay" class="overlay hidden">
+    <h2 class="rank-heading">🏆 チャンピオン殿堂</h2>
+    <p class="rank-sub">いちばん殴り上がった人たち TOP10</p>
+    <ol id="rank-list"></ol>
+    <div class="tap-label">タップで閉じる</div>
+  </div>
+
+  <script src="game.js" defer></script>
+</body>
+</html>
